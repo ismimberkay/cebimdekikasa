@@ -24,3 +24,7 @@ Tüm harcamaların senin tarayıcının hafızasında (LocalStorage) tutulur. İ
 Dikkat: Tarayıcı geçmişini "tüm çerezlerle birlikte" temizlersen verilerin silinebilir.
 
 Bunu önlemek için arada bir Ayarlar > Yedek İndir butonuna basıp yedeğini bilgisayarına almayı unutma.
+
+
+Bu proje tamamen Gemini 3 Pro ve Claud 4.5 Opus Thinking modelleri kullanılarak, “vibe coding” yaklaşımıyla geliştirilmiştir.
+Konu hakkında teknik bilgim yoktur; kodun mimarisi, en iyi pratikler veya güvenlik açısından doğruluğu garanti edilmez.
