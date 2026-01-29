@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analiz Raporu</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="design.css?v=21">
+</head>
+
+<body data-page="analysis">
+    <!-- Resolution Blocker (Hard Limit) -->
+    <div id="resolution-blocker">
+        <i class="fa-solid fa-desktop"></i>
+        <h2>Yetersiz Ekran Çözünürlüğü</h2>
+        <p>Bu uygulama en verimli <strong>1920x1080</strong> çözünürlükte çalışır.</p>
+        <div class="res-badge">Minimum Gereksinim: 1368 x 768 px</div>
+        <p style="font-size:0.9rem; margin-top:15px; opacity:0.7;">Şu anki ekranınız bu sınırın altında.</p>
+    </div>
+
+    <div class="web-app-container">
+        <aside class="sidebar">
+            <!-- Sidebar content rendered by main.js: renderSidebar() -->
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="greeting">
+                    <h2>Finansal Analiz</h2>
+                    <p>Harcamalarının grafiksel dağılımı.</p>
+                </div>
+            </header>
+
+            <div class="dashboard-grid"
+                style="grid-template-columns: 1fr 1fr; grid-template-areas: 'chart list'; height: calc(100vh - 160px);">
+                <div class="widget" style="grid-area: chart; display:flex; flex-direction:column; padding:25px;">
+                    <div class="widget-header"
+                        style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                        <h3>Harcama Dağılımı</h3>
+                        <div style="display:flex; gap:10px;">
+                            <div style="width: 200px;">
+                                <select id="filter-range" class="clean-select">
+                                    <option value="all">Tüm Zamanlar</option>
+                                </select>
+                            </div>
+                            <div style="width: 200px;">
+                                <select id="filter-method" class="clean-select">
+                                    <option value="all">Tüm Yöntemler</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="flex:1; position:relative; width:100%; min-height:0;">
+                        <canvas id="expenseChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="widget"
+                    style="grid-area: list; overflow:hidden; display:flex; flex-direction:column; height: 100%;">
+                    <div class="widget-header" style="display:flex; justify-content:space-between; align-items:center;">
+                        <h3>Döneme Ait Harcamalar</h3>
+                        <select id="sort-analysis" class="clean-select" style="font-size:0.85rem;">
+                            <option value="date-desc">Tarih (Yeni &gt; Eski)</option>
+                            <option value="date-asc">Tarih (Eski &gt; Yeni)</option>
+                            <option value="amount-desc">Tutar (Azalan)</option>
+                            <option value="amount-asc">Tutar (Artan)</option>
+                        </select>
+                    </div>
+                    <div id="analysis-list" class="transaction-list-web" style="flex:1; max-height: none;"></div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+    <script src="main.js?v=21"></script>
+</body>
+
+</html>

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ayarlar</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="design.css?v=21">
+</head>
+
+<body data-page="settings">
+    <!-- Resolution Blocker (Hard Limit) -->
+    <div id="resolution-blocker">
+        <i class="fa-solid fa-desktop"></i>
+        <h2>Yetersiz Ekran Çözünürlüğü</h2>
+        <p>Bu uygulama en verimli <strong>1920x1080</strong> çözünürlükte çalışır.</p>
+        <div class="res-badge">Minimum Gereksinim: 1368 x 768 px</div>
+        <p style="font-size:0.9rem; margin-top:15px; opacity:0.7;">Şu anki ekranınız bu sınırın altında.</p>
+    </div>
+
+    <div class="web-app-container">
+        <aside class="sidebar">
+            <!-- Sidebar content rendered by main.js: renderSidebar() -->
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="greeting">
+                    <h2>Ayarlar ⚙️</h2>
+                    <p style="color:var(--text-light)">Veri yönetimi ve yedekleme.</p>
+                </div>
+            </header>
+
+            <div class="settings-container" style="max-width: 600px; display:flex; flex-direction:column; gap:25px;">
+
+                <div class="settings-card">
+                    <div class="settings-header">
+                        <div class="icon-box blue"><i class="fa-solid fa-cloud-arrow-down"></i></div>
+                        <div>
+                            <h3>Veri Yedekleme</h3>
+                            <p>Verilerini kaybetmemek için cihazına indir.</p>
+                        </div>
+                    </div>
+                    <div class="settings-actions">
+                        <button class="btn-modern-outline" onclick="downloadBackup()">
+                            <i class="fa-solid fa-download"></i> Yedek İndir (JSON)
+                        </button>
+                        <div style="position:relative; flex:1;">
+                            <button class="btn-modern-outline" onclick="document.getElementById('import-file').click()">
+                                <i class="fa-solid fa-file-import"></i> Yedek Yükle
+                            </button>
+                            <input type="file" id="import-file" style="display:none" onchange="restoreBackup(this)"
+                                accept=".json">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-card">
+                    <div class="settings-header">
+                        <div class="icon-box neon-acc"><i class="fa-solid fa-file-export"></i></div>
+                        <div>
+                            <h3>Raporlar</h3>
+                            <p>Harcama geçmişini indir.</p>
+                        </div>
+                    </div>
+                    <div class="settings-actions">
+                        <button class="btn-modern-outline" onclick="exportToExcel()">
+                            <i class="fa-solid fa-file-csv"></i> Excel (CSV)
+                        </button>
+                        <button class="btn-modern-outline" onclick="exportToSheets()">
+                            <i class="fa-solid fa-file-excel"></i> Google Sheets
+                        </button>
+                    </div>
+                </div>
+
+                <div class="settings-card danger-zone">
+                    <div class="settings-header">
+                        <div class="icon-box red"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                        <div>
+                            <h3>DİKKAT!</h3>
+                            <p>Tüm kayıtları siler ve uygulamayı sıfırlar.</p>
+                        </div>
+                    </div>
+                    <button class="btn-danger-modern" onclick="confirmReset()">
+                        <i class="fa-solid fa-trash-can"></i>
+                        <span>Tüm Verileri Sıfırla</span>
+                    </button>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="main.js?v=21"></script>
+</body>
+
+</html>

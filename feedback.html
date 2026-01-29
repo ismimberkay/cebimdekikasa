@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>İletişim</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="design.css?v=21">
+    <style>
+        .feedback-container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .feedback-card {
+            background: var(--bg-widget);
+            border-radius: 20px;
+            padding: 30px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-widget);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--text-main);
+        }
+
+        .form-group select,
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: rgba(125, 125, 125, 0.05);
+            color: var(--text-main);
+            font-family: inherit;
+            outline: none;
+            transition: 0.3s;
+        }
+
+        .form-group select:focus,
+        .form-group input:focus,
+        .form-group textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+        }
+
+        .contact-info {
+            background: rgba(67, 97, 238, 0.05);
+            border: 1px solid rgba(67, 97, 238, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 30px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .contact-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        /* Alert Box */
+        .alert-box {
+            background: rgba(239, 35, 60, 0.1);
+            border: 1px solid rgba(239, 35, 60, 0.3);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 30px;
+            display: flex;
+            gap: 15px;
+            align-items: flex-start;
+            animation: fadeInDown 0.5s ease;
+        }
+
+        .alert-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--danger);
+            color: white;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+            box-shadow: 0 4px 10px rgba(239, 35, 60, 0.3);
+        }
+
+        .alert-content h4 {
+            color: var(--danger);
+            margin-bottom: 5px;
+            font-size: 1.1rem;
+        }
+
+        .alert-content p {
+            color: var(--text-main);
+            font-size: 0.95rem;
+            opacity: 0.9;
+        }
+
+        /* Modern Select & Form */
+        .custom-select-wrapper {
+            position: relative;
+        }
+
+        .select-arrow {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-light);
+            pointer-events: none;
+            transition: 0.3s;
+        }
+
+        .form-group:focus-within .select-arrow {
+            color: var(--primary);
+            transform: translateY(-50%) rotate(180deg);
+        }
+
+        .form-group select {
+            appearance: none;
+            cursor: pointer;
+            padding-right: 40px;
+            /* Space for arrow */
+        }
+
+        .form-group select:disabled,
+        .form-group input:disabled,
+        .form-group textarea:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .btn-submit.disabled-btn {
+            background: var(--text-light);
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+
+
+        /* NEW SIGNATURE STYLES */
+        .vibe-signature {
+            text-align: center;
+            margin-top: 50px;
+            padding-bottom: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .vibe-icon {
+            font-size: 2rem;
+            background: linear-gradient(45deg, #FF0080, #7928CA);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 5px;
+            filter: drop-shadow(0 0 10px rgba(121, 40, 202, 0.3));
+        }
+
+        .vibe-signature p {
+            color: var(--text-light);
+            font-size: 0.95rem;
+            margin: 0;
+        }
+
+        .vibe-badge {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--primary);
+            font-weight: 700;
+            opacity: 0.8;
+            background: rgba(67, 97, 238, 0.1);
+            padding: 5px 15px;
+            border-radius: 20px;
+        }
+    </style>
+</head>
+
+<body data-page="feedback">
+    <div class="web-app-container">
+        <aside class="sidebar">
+            <!-- Sidebar content rendered by main.js: renderSidebar() -->
+            <div class="sidebar-footer" style="display:none;"></div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="greeting">
+                    <h2>İletişim & Destek 📣</h2>
+                    <p style="color:var(--text-light)">Görüşleriniz bizim için değerli.</p>
+                </div>
+            </header>
+
+            <div class="feedback-container">
+
+                <!-- Temporary Alert -->
+                <div class="alert-box">
+                    <div class="alert-icon">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                    </div>
+                    <div class="alert-content">
+                        <h4>Form Gönderimi Geçici Olarak Kapalıdır</h4>
+                        <p>Şu anda sunucu bakım çalışması nedeniyle form üzerinden mesaj gönderilememektedir. Lütfen tüm
+                            talepleriniz için aşağıdaki e-posta adresini kullanınız.</p>
+                    </div>
+                </div>
+
+                <div class="feedback-card">
+                    <div class="form-group">
+                        <label>Konu Seçimi</label>
+                        <div class="custom-select-wrapper">
+                            <select id="fb-topic" disabled>
+                                <option value="" disabled selected>Bildirim konusunu seçiniz...</option>
+                                <option value="bug">🐛 Hata / Bug Bildirimi</option>
+                                <option value="feature">💡 Yeni Özellik İsteği</option>
+                                <option value="improvement">🚀 İyileştirme Önerisi</option>
+                                <option value="complaint">⚠️ Şikayet</option>
+                                <option value="account">👤 Hesap İşlemleri</option>
+                                <option value="security">🔒 Güvenlik Endişesi</option>
+                                <option value="other">📝 Diğer Konular</option>
+                            </select>
+                            <i class="fa-solid fa-chevron-down select-arrow"></i>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>E-posta Adresiniz</label>
+                        <input type="email" id="fb-email" placeholder="example@mail.com" disabled>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Mesajınız</label>
+                        <textarea id="fb-message" rows="6" placeholder="Lütfen görüşlerinizi detaylıca yazın..."
+                            disabled></textarea>
+                    </div>
+
+                    <button class="btn-submit disabled-btn" onclick="return false;">
+                        <i class="fa-solid fa-paper-plane" style="margin-right:8px;"></i> Gönder (Devre Dışı)
+                    </button>
+
+                    <p style="margin-top:15px; font-size:0.85rem; color:var(--text-light); text-align:center;">
+                        * Form şu an aktif değildir. Lütfen mail atınız.
+                    </p>
+                </div>
+
+                <div class="contact-info">
+                    <div class="contact-icon">
+                        <i class="fa-solid fa-envelope"></i>
+                    </div>
+                    <div>
+                        <h4 style="color:var(--text-main); margin-bottom:2px;">E-Posta İletişim</h4>
+                        <p style="color:var(--text-light); font-size:0.9rem;">Tüm konular için 7/24 yazabilirsiniz:
+                            <strong style="color:var(--primary); user-select:all;">berkaymanci@icloud.com</strong>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- NEW VIBE CODING SIGNATURE -->
+                <div class="vibe-signature">
+                    <i class="fa-solid fa-wand-magic-sparkles vibe-icon"></i>
+                    <p>Designed & Crafted by <strong style="color:var(--text-main);">Berkay MANCI</strong></p>
+                    <span class="vibe-badge">Buılt wıth Vıbe Codıng AI</span>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="main.js?v=21"></script>
+    <script>
+        function sendFeedback() {
+            const topic = document.getElementById('fb-topic').value;
+            const email = document.getElementById('fb-email').value;
+            const msg = document.getElementById('fb-message').value;
+
+            if (!msg.trim()) {
+                showToast('Uyarı', 'Lütfen mesajınızı yazın.', 'error');
+                return;
+            }
+
+            // Mock sending
+            showToast('Gönderildi', 'Geri bildiriminiz başarıyla iletildi. Teşekkürler!', 'success');
+
+            // Clear form
+            document.getElementById('fb-email').value = '';
+            document.getElementById('fb-message').value = '';
+        }
+    </script>
+</body>
+
+</html>

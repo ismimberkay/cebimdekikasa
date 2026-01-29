@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kredi Kartı Yönetimi</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="design.css?v=21">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+</head>
+
+<body data-page="credit">
+    <!-- Resolution Blocker (Hard Limit) -->
+    <div id="resolution-blocker">
+        <i class="fa-solid fa-desktop"></i>
+        <h2>Yetersiz Ekran Çözünürlüğü</h2>
+        <p>Bu uygulama en verimli <strong>1920x1080</strong> çözünürlükte çalışır.</p>
+        <div class="res-badge">Minimum Gereksinim: 1368 x 768 px</div>
+        <p style="font-size:0.9rem; margin-top:15px; opacity:0.7;">Şu anki ekranınız bu sınırın altında.</p>
+    </div>
+
+    <div class="web-app-container">
+        <aside class="sidebar">
+            <!-- Sidebar content rendered by main.js: renderSidebar() -->
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="greeting">
+                    <h2>Kart Portföyü 💳</h2>
+                    <p style="color:var(--text-light)">Limitlerini ve taksitlerini yönet.</p>
+                </div>
+            </header>
+
+            <div class="dashboard-grid">
+
+                <div class="credit-summary-card">
+                    <div class="credit-header-bg">
+                        <div class="card-selector-wrapper">
+                            <select id="view-card-select" class="clean-select">
+                                <option value="all">Tüm Kartlar (Genel Durum)</option>
+                            </select>
+                        </div>
+
+                        <div style="display:flex; gap:10px;">
+                            <button id="pay-debt-btn" class="btn-action-outline" onclick="openPayDebtModal()"
+                                style="color:var(--success); border-color:var(--success);">
+                                <i class="fa-solid fa-money-bill-transfer"></i> <span style="font-weight:600;">Borç
+                                    Öde</span>
+                            </button>
+                            <button id="card-action-btn" class="btn-action-outline" onclick="openCardManagerModal()">
+                                <i class="fa-solid fa-pen-to-square"></i> Kart Yönetimi
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="credit-body">
+
+                        <div class="credit-stat-box">
+                            <span class="credit-label"><i class="fa-solid fa-file-invoice-dollar"></i> Dönem
+                                Borcu</span>
+                            <div class="credit-amount">
+                                <span id="statement-total">0.00</span><span class="credit-currency">₺</span>
+                            </div>
+                            <div class="date-badge"
+                                style="margin-top:10px; background:rgba(239, 35, 60, 0.1); color:var(--danger);">
+                                <i class="fa-regular fa-calendar-xmark"></i> Son Ödeme: <span
+                                    id="due-date-display">--.--</span>
+                            </div>
+                        </div>
+
+                        <div class="credit-stat-box"
+                            style="flex:1; display:flex; justify-content:center; align-items:center;">
+                            <div class="credit-card-visual">
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <div class="card-chip"></div>
+                                    <div class="card-logo">VISA</div>
+                                </div>
+
+                                <div class="card-number">**** **** **** <span id="card-last-digits">----</span></div>
+
+                                <div class="card-info-group">
+                                    <div>
+                                        <div class="card-label">Kalan Limit</div>
+                                        <div class="card-value"><span id="remaining-limit">0.00</span> ₺</div>
+                                    </div>
+                                    <div style="text-align:right;">
+                                        <div class="card-label">Limit Durumu</div>
+                                        <div class="card-limit-bar">
+                                            <div id="limit-bar-fill" class="card-limit-fill" style="width: 100%;"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="credit-stat-box" style="align-items:flex-end;">
+                            <span class="credit-label">Hesap Kesim Aralığı</span>
+                            <div class="period-control-box" style="margin-top:5px;">
+                                <button id="btn-prev-period" class="btn-period"><i
+                                        class="fa-solid fa-chevron-left"></i></button>
+                                <span id="period-display-text" class="period-text">Bu Dönem</span>
+                                <button id="btn-next-period" class="btn-period"><i
+                                        class="fa-solid fa-chevron-right"></i></button>
+                            </div>
+                            <span id="statement-period" style="display:none;"></span>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="widget form-widget">
+                    <div class="widget-header">
+                        <h3>Taksit / Harcama Ekle</h3>
+                    </div>
+
+                    <div class="input-grid">
+                        <div class="input-wrapper">
+                            <select id="form-card-select">
+                                <option value="">Kart Seçiniz...</option>
+                            </select>
+                        </div>
+
+                        <div class="input-wrapper autocomplete-wrapper">
+                            <i class="fa-solid fa-store input-icon"></i>
+                            <input type="text" id="cr-merchant" placeholder="Harcama Yeri" autocomplete="off">
+                            <div id="cr-merchant-suggestions" class="suggestions-box"></div>
+                        </div>
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-turkish-lira-sign input-icon"></i>
+                            <input type="number" id="cr-amount" placeholder="Toplam Tutar">
+                        </div>
+
+                        <div class="input-wrapper">
+                            <i class="fa-regular fa-calendar input-icon"></i>
+                            <input type="date" id="cr-date" style="font-family: 'Outfit', sans-serif;">
+                        </div>
+
+                        <div class="input-wrapper">
+                            <select id="cr-installments">
+                                <option value="1">Tek Çekim</option>
+                                <option value="2">2 Taksit</option>
+                                <option value="3">3 Taksit</option>
+                                <option value="6">6 Taksit</option>
+                                <option value="12">12 Taksit</option>
+                            </select>
+                        </div>
+                        <div class="input-wrapper">
+                            <select id="cr-category-select"></select>
+                        </div>
+
+                    </div>
+                    <button id="add-credit-btn" class="btn-submit">Harcamayı Karta İşle</button>
+                </div>
+
+                <div class="widget history-widget" style="min-height: 400px;">
+                    <div class="widget-header">
+                        <h3>Hareketler</h3>
+                        <small style="color:var(--text-light)">Seçili döneme ait detaylar</small>
+                    </div>
+                    <div id="statement-list" class="transaction-list-web"></div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/tr.js"></script>
+    <script src="main.js?v=21"></script>
+</body>
+
+</html>

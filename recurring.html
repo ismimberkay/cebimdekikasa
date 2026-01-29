@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Düzenli Giderler</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="design.css?v=21">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+</head>
+
+<body data-page="recurring">
+    <!-- Resolution Blocker (Hard Limit) -->
+    <div id="resolution-blocker">
+        <i class="fa-solid fa-desktop"></i>
+        <h2>Yetersiz Ekran Çözünürlüğü</h2>
+        <p>Bu uygulama en verimli <strong>1920x1080</strong> çözünürlükte çalışır.</p>
+        <div class="res-badge">Minimum Gereksinim: 1368 x 768 px</div>
+        <p style="font-size:0.9rem; margin-top:15px; opacity:0.7;">Şu anki ekranınız bu sınırın altında.</p>
+    </div>
+
+    <div class="web-app-container">
+        <aside class="sidebar">
+            <!-- Sidebar content rendered by main.js: renderSidebar() -->
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="greeting">
+                    <h2>Düzenli Giderler 📅</h2>
+                    <p style="color:var(--text-light)">Fatura, kira ve abonelik takibi.</p>
+                </div>
+            </header>
+
+            <div class="dashboard-grid">
+
+                <div class="widget form-widget" style="grid-area: form;">
+                    <div class="widget-header">
+                        <h3>Yeni Plan Oluştur</h3>
+                    </div>
+
+                    <div class="input-grid">
+                        <label
+                            style="font-size:0.85rem; color:var(--text-light); margin-left:5px; margin-bottom:5px;">İkon
+                            Seçimi</label>
+                        <div id="rec-icon-selector" class="icon-select-grid"></div>
+
+                        <div class="input-wrapper autocomplete-wrapper">
+                            <i class="fa-solid fa-pen input-icon"></i>
+                            <input type="text" id="rec-name" autocomplete="off" placeholder="Gider Adı (Örn: Netflix)">
+                            <div id="rec-name-suggestions" class="suggestions-box"></div>
+                        </div>
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-turkish-lira-sign input-icon"></i>
+                            <input type="number" id="rec-amount" autocomplete="off" placeholder="Tam Tutar (₺)">
+                        </div>
+                        <div class="input-wrapper">
+                            <i class="fa-regular fa-calendar input-icon"></i>
+                            <input type="number" id="rec-day" autocomplete="off" min="1" max="31"
+                                placeholder="Ödeme Günü (1-31)">
+                        </div>
+
+                        <div class="smart-select-container">
+                            <label style="font-size:0.85rem; color:var(--text-light); margin-left:5px;">Ödeme
+                                Kaynağı</label>
+                            <div class="smart-view-select">
+                                <select id="rec-method-select"></select>
+                            </div>
+                        </div>
+
+                        <hr style="margin:10px 0; border:0; border-top:1px dashed var(--border);">
+
+                        <label
+                            style="font-size:0.85rem; color:var(--text-light); margin-left:5px; margin-bottom:5px;">İade
+                            / Cashback Ayarları</label>
+                        <div style="display:flex; gap:10px; align-items:stretch;">
+                            <div class="input-wrapper" style="flex:0 0 180px; min-width:180px;">
+                                <select id="rec-cb-type">
+                                    <option value="none">İade Yok</option>
+                                    <option value="percent">Yüzde (%)</option>
+                                    <option value="fixed">Sabit (₺)</option>
+                                </select>
+                            </div>
+                            <div class="input-wrapper" style="flex:1;">
+                                <i class="fa-solid fa-turkish-lira-sign input-icon"></i>
+                                <input type="number" id="rec-cb-value" autocomplete="off" placeholder="Miktar">
+                            </div>
+                        </div>
+
+                        <div class="input-wrapper" style="margin-top:10px;">
+                            <i class="fa-regular fa-calendar-check input-icon"></i>
+                            <label
+                                style="font-size:0.75rem; color:var(--text-light); position:absolute; top:-8px; left:10px; background:var(--bg-widget); padding:0 5px; z-index:2;">Kampanya
+                                Bitiş Tarihi (Opsiyonel)</label>
+                            <input type="date" id="rec-camp-end">
+                        </div>
+
+                        <label class="toggle-switch-container" for="rec-autopay">
+                            <div class="toggle-switch">
+                                <input type="checkbox" id="rec-autopay">
+                                <span class="slider"></span>
+                            </div>
+                            <span style="font-size:0.9rem; color:var(--text-main); font-weight:500;">Otomatik Ödeme
+                                (Ayın günü gelince işle)</span>
+                        </label>
+                    </div>
+                    <button id="add-rec-btn" class="btn-submit" onclick="addRecurringPlan()">Kaydet</button>
+                </div>
+
+                <div class="widget history-widget" style="grid-area: history; display:none;"></div>
+
+                <div class="widget history-widget" style="grid-area: summary; grid-row: 1 / -1; min-height: 600px;">
+                    <div class="widget-header">
+                        <h3>Abonelikleriniz</h3>
+                    </div>
+                    <div id="recurring-list" class="transaction-list-web" style="max-height: 70vh;"></div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/tr.js"></script>
+    <script src="main.js?v=21"></script>
+</body>
+
+</html>

@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cebimdeki Kasa - Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="design.css?v=21">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+</head>
+
+<body data-page="dashboard">
+    <!-- Resolution Blocker (Hard Limit) -->
+    <div id="resolution-blocker">
+        <i class="fa-solid fa-desktop"></i>
+        <h2>Yetersiz Ekran Çözünürlüğü</h2>
+        <p>Bu uygulama en verimli <strong>1920x1080</strong> çözünürlükte çalışır.</p>
+        <div class="res-badge">Minimum Gereksinim: 1368 x 768 px</div>
+        <p style="font-size:0.9rem; margin-top:15px; opacity:0.7;">Şu anki ekranınız bu sınırın altında.</p>
+    </div>
+
+    <div class="web-app-container">
+        <aside class="sidebar">
+            <!-- Sidebar content rendered by main.js: renderSidebar() -->
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="greeting">
+                    <h2>Hoş Geldin! 👋</h2>
+                    <p style="color:var(--text-light)">Finansal durumunu kontrol et.</p>
+                </div>
+            </header>
+
+            <div class="dashboard-grid">
+
+                <div class="summary-row">
+                    <div class="widget summary-widget">
+                        <div class="summary-content">
+                            <span class="summary-label">Bu Ay Toplam Gider</span>
+                            <div class="amount-display">
+                                <span id="grand-total">0.00</span>
+                                <span class="currency">₺</span>
+                            </div>
+                            <div class="trend trend-badge">
+                                <i class="fa-solid fa-chart-line"></i> <span>Harcama Analizi</span>
+                            </div>
+                        </div>
+                        <div class="summary-deco-icon">
+                            <i class="fa-solid fa-wallet"></i>
+                        </div>
+                    </div>
+
+                    <div class="widget summary-widget"
+                        style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+                        <div class="summary-content">
+                            <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+                                <span class="summary-label" style="color:rgba(255,255,255,0.9);">Cüzdanım /
+                                    Varlık</span>
+
+                            </div>
+                            <div class="amount-display" style="color:white;">
+                                <span id="wallet-total">0.00</span>
+                                <span class="currency">₺</span>
+                            </div>
+                            <div class="trend" style="color:rgba(255,255,255,0.8); cursor:pointer;"
+                                onclick="openWalletDetails()">
+                                <i class="fa-solid fa-list"></i> <span>Detaylar & Geçmiş</span>
+                            </div>
+                        </div>
+                        <div class="summary-deco-icon" style="color:rgba(255,255,255,0.2);">
+                            <i class="fa-solid fa-sack-dollar"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="widget form-widget">
+                    <div class="widget-header">
+                        <h3>Hızlı Harcama Ekle</h3>
+                    </div>
+                    <div class="input-grid">
+                        <div class="input-wrapper autocomplete-wrapper">
+                            <i class="fa-solid fa-store input-icon"></i>
+                            <input type="text" id="exp-merchant" placeholder="Harcama Yeri (Örn: Starbucks)"
+                                autocomplete="off">
+                            <div id="exp-merchant-suggestions" class="suggestions-box"></div>
+                        </div>
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-pen input-icon"></i>
+                            <input type="text" id="exp-desc" autocomplete="off" placeholder="Açıklama (Opsiyonel)">
+                        </div>
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-turkish-lira-sign input-icon"></i>
+                            <input type="number" id="exp-amount" autocomplete="off" placeholder="Tutar (₺)">
+                        </div>
+                        <div class="input-wrapper">
+                            <i class="fa-regular fa-calendar input-icon"></i>
+                            <input type="date" id="exp-date">
+                        </div>
+
+                        <div style="display:flex; align-items:center; gap:10px; padding:0 5px;">
+                        </div>
+
+                        <div id="smart-method" class="smart-select-container">
+                            <div
+                                style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                                <label style="font-size:0.85rem; color:var(--text-light); margin-left:5px;">Ödeme
+                                    Yöntemi</label>
+                                <div style="display:flex; gap:5px;">
+                                    <button class="btn-icon" onclick="toggleSmartAdd('method')" title="Yeni Ekle"
+                                        style="width:25px; height:25px; font-size:0.8rem;"><i
+                                            class="fa-solid fa-plus"></i></button>
+                                    <button class="btn-icon" onclick="deleteSmartItem('method')" title="Seçiliyi Sil"
+                                        style="width:25px; height:25px; font-size:0.8rem;"><i
+                                            class="fa-solid fa-trash"></i></button>
+                                    <button class="btn-icon hidden" onclick="saveSmartItem('method')" title="Kaydet"
+                                        style="color:var(--success); border-color:var(--success); width:25px; height:25px; font-size:0.8rem;"><i
+                                            class="fa-solid fa-check"></i></button>
+                                    <button class="btn-icon hidden" onclick="cancelSmartItem('method')" title="İptal"
+                                        style="color:var(--danger); border-color:var(--danger); width:25px; height:25px; font-size:0.8rem;"><i
+                                            class="fa-solid fa-xmark"></i></button>
+                                </div>
+                            </div>
+                            <div class="smart-view-select">
+                                <select id="exp-method-select"></select>
+                            </div>
+                            <div class="smart-view-add hidden">
+                                <input type="text" id="new-method-name" placeholder="Yeni Yöntem Adı">
+                            </div>
+                        </div>
+
+                        <div id="smart-category" class="smart-select-container">
+                            <div
+                                style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                                <label
+                                    style="font-size:0.85rem; color:var(--text-light); margin-left:5px;">Kategori</label>
+                                <div style="display:flex; gap:5px;">
+                                    <button class="btn-icon" onclick="toggleSmartAdd('category')" title="Yeni Ekle"
+                                        style="width:25px; height:25px; font-size:0.8rem;"><i
+                                            class="fa-solid fa-plus"></i></button>
+                                    <button class="btn-icon" onclick="deleteSmartItem('category')" title="Seçiliyi Sil"
+                                        style="width:25px; height:25px; font-size:0.8rem;"><i
+                                            class="fa-solid fa-trash"></i></button>
+                                    <button class="btn-icon hidden" onclick="saveSmartItem('category')" title="Kaydet"
+                                        style="color:var(--success); border-color:var(--success); width:25px; height:25px; font-size:0.8rem;"><i
+                                            class="fa-solid fa-check"></i></button>
+                                    <button class="btn-icon hidden" onclick="cancelSmartItem('category')" title="İptal"
+                                        style="color:var(--danger); border-color:var(--danger); width:25px; height:25px; font-size:0.8rem;"><i
+                                            class="fa-solid fa-xmark"></i></button>
+                                </div>
+                            </div>
+                            <div class="smart-view-select">
+                                <select id="exp-category-select"></select>
+                            </div>
+                            <div class="smart-view-add hidden">
+                                <input type="text" id="new-category-name" placeholder="Yeni Kategori Adı">
+                            </div>
+                        </div>
+                    </div>
+                    <button id="add-btn" class="btn-submit">Kaydet</button>
+                </div>
+
+                <div class="widget history-widget">
+                    <div class="widget-header">
+                        <div style="display:flex; align-items:baseline; gap:10px;">
+                            <h3>Son İşlemler</h3>
+                            <span style="font-size:0.75rem; color:var(--text-light); font-weight:400;">(Burada Yalnızca
+                                Son 10 İşleminiz Gözükür!)</span>
+                        </div>
+                        <a href="expenses.html" class="see-all">Tümü</a>
+                    </div>
+                    <div id="transaction-history" class="transaction-list-web"></div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/tr.js"></script>
+    <script src="main.js?v=21"></script>
+</body>
+
+</html>

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Harcama Takvimi</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="design.css?v=21">
+    <style>
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .cal-header {
+            text-align: center;
+            font-weight: 700;
+            color: var(--text-light);
+            padding: 10px;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+        }
+
+        .cal-day {
+            background: var(--bg-widget);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            min-height: 100px;
+            padding: 10px;
+            position: relative;
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .cal-day:hover {
+            border-color: var(--primary);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .cal-date-num {
+            font-weight: 700;
+            color: var(--text-main);
+            font-size: 1rem;
+        }
+
+        .cal-total {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-light);
+            margin-top: 5px;
+        }
+
+        .cal-total.high-spend {
+            color: var(--danger);
+        }
+
+        .no-spend-badge {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 40px;
+            height: 40px;
+            background: rgba(46, 196, 182, 0.1);
+            color: var(--success);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            border: 1px solid var(--success);
+        }
+
+        .bill-icon {
+            font-size: 0.8rem;
+            color: var(--accent);
+            margin-top: auto;
+            align-self: flex-end;
+        }
+    </style>
+</head>
+
+<body data-page="calendar">
+    <!-- Resolution Blocker (Hard Limit) -->
+    <div id="resolution-blocker">
+        <i class="fa-solid fa-desktop"></i>
+        <h2>Yetersiz Ekran Çözünürlüğü</h2>
+        <p>Bu uygulama en verimli <strong>1920x1080</strong> çözünürlükte çalışır.</p>
+        <div class="res-badge">Minimum Gereksinim: 1368 x 768 px</div>
+        <p style="font-size:0.9rem; margin-top:15px; opacity:0.7;">Şu anki ekranınız bu sınırın altında.</p>
+    </div>
+
+    <div class="web-app-container">
+        <aside class="sidebar">
+            <!-- Sidebar content rendered by main.js: renderSidebar() -->
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="greeting">
+                    <h2>Takvim Görünümü 🗓️</h2>
+                    <p style="color:var(--text-light)">Günlük harcama performansı.</p>
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <div class="period-nav-ctrl">
+                        <button class="btn-nav-arrow" id="cal-prev"><i class="fa-solid fa-chevron-left"></i></button>
+                        <span id="cal-period-display"
+                            style="font-weight:700; padding:0 15px; min-width:120px; text-align:center;">---</span>
+                        <button class="btn-nav-arrow" id="cal-next"><i class="fa-solid fa-chevron-right"></i></button>
+                    </div>
+                </div>
+            </header>
+
+            <div class="widget" style="padding:20px; min-height:600px;">
+                <div class="calendar-grid">
+                    <div class="cal-header">Pzt</div>
+                    <div class="cal-header">Sal</div>
+                    <div class="cal-header">Çar</div>
+                    <div class="cal-header">Per</div>
+                    <div class="cal-header">Cum</div>
+                    <div class="cal-header">Cmt</div>
+                    <div class="cal-header">Paz</div>
+                </div>
+                <div id="calendar-days" class="calendar-grid" style="margin-top:5px; row-gap:15px;">
+                    <!-- Days will be injected here -->
+                </div>
+            </div>
+
+        </main>
+    </div>
+    <script src="main.js?v=21"></script>
+</body>
+
+</html>

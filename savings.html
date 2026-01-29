@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Birikimlerim & Piyasa</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="design.css?v=21">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+</head>
+
+<body data-page="savings">
+    <!-- Resolution Blocker (Hard Limit) -->
+    <div id="resolution-blocker">
+        <i class="fa-solid fa-desktop"></i>
+        <h2>Yetersiz Ekran Çözünürlüğü</h2>
+        <p>Bu uygulama en verimli <strong>1920x1080</strong> çözünürlükte çalışır.</p>
+        <div class="res-badge">Minimum Gereksinim: 1368 x 768 px</div>
+        <p style="font-size:0.9rem; margin-top:15px; opacity:0.7;">Şu anki ekranınız bu sınırın altında.</p>
+    </div>
+
+    <div class="web-app-container">
+        <aside class="sidebar">
+            <!-- Sidebar content rendered by main.js: renderSidebar() -->
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="greeting">
+                    <h2>Varlık Yönetimi 📈</h2>
+                    <p style="color:var(--text-light)">Altın, döviz ve borsa takibi.</p>
+                </div>
+
+            </header>
+
+            <div id="market-ticker" class="market-ticker-row">
+                <div style="padding:10px; color:var(--text-light); font-size:0.9rem;">Veriler yükleniyor...</div>
+            </div>
+
+            <div class="portfolio-grid"
+                style="display: grid; grid-template-columns: 1.4fr 1fr; gap: 25px; margin-top:15px;">
+
+                <div style="display:flex; flex-direction:column; gap:25px;">
+
+                    <div class="widget" style="height: 350px; position:relative; padding:20px;">
+                        <div class="widget-header">
+                            <h3>Portföy Değeri Değişimi</h3>
+                        </div>
+                        <div style="height: 260px; width:100%;">
+                            <canvas id="savingsChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="widget form-widget">
+                        <div class="widget-header">
+                            <h3>Hızlı İşlem</h3>
+                        </div>
+
+                        <div class="trade-tabs">
+                            <div class="trade-tab active" data-type="buy">Varlık Al</div>
+                            <div class="trade-tab" data-type="sell">Varlık Sat</div>
+                        </div>
+
+                        <div class="input-grid">
+                            <div class="input-wrapper">
+                                <i class="fa-solid fa-coins input-icon"></i>
+                                <select id="asset-type">
+                                    <option value="gram-altin">Gram Altın</option>
+                                    <option value="usd">Dolar (USD)</option>
+                                    <option value="eur">Euro (EUR)</option>
+                                    <option value="btc">Bitcoin</option>
+                                </select>
+                            </div>
+
+                            <div class="smart-select-container" style="flex-direction:row; gap:15px;">
+                                <div class="input-wrapper" style="flex:1;">
+                                    <i class="fa-solid fa-scale-balanced input-icon"></i>
+                                    <input type="number" id="asset-amount" placeholder="Miktar (Adet/Gr)">
+                                </div>
+                                <div class="input-wrapper" style="flex:1;">
+                                    <i class="fa-solid fa-tag input-icon"></i>
+                                    <input type="number" id="asset-price" placeholder="Birim Fiyat (TL)">
+                                </div>
+                            </div>
+
+                            <div class="input-wrapper">
+                                <i class="fa-regular fa-calendar input-icon"></i>
+                                <input type="date" id="asset-date">
+                            </div>
+                        </div>
+
+                        <button id="trade-btn" class="btn-submit" onclick="handleAssetTrade('buy')"
+                            style="background:var(--success);">Varlık Al (Ekle)</button>
+                    </div>
+
+                </div>
+
+                <div style="display:flex; flex-direction:column; gap:25px;">
+
+                    <div class="widget" style="padding:25px;">
+                        <span class="summary-label">Toplam Varlık Değeri</span>
+                        <div class="amount-display">
+                            <span id="total-asset-val">0.00</span><span class="currency">₺</span>
+                        </div>
+
+                        <div
+                            style="margin-top:20px; display:flex; justify-content:space-between; border-top:1px solid var(--border); padding-top:15px;">
+                            <div>
+                                <small style="color:var(--text-light); display:block; margin-bottom:3px;">Toplam
+                                    Maliyet</small>
+                                <span id="total-asset-cost"
+                                    style="font-weight:700; font-size:1.1rem; color:var(--text-main);">0.00</span> ₺
+                            </div>
+                            <div style="text-align:right;">
+                                <small style="color:var(--text-light); display:block; margin-bottom:3px;">Kar /
+                                    Zarar</small>
+                                <span id="total-asset-profit" style="font-weight:700; font-size:1.1rem;">0.00</span> ₺
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="widget history-widget" style="flex:1; min-height:300px;">
+                        <div class="widget-header">
+                            <h3>Varlıklarım</h3>
+                        </div>
+                        <div id="asset-list" class="transaction-list-web">
+                        </div>
+                    </div>
+
+                    <div class="widget history-widget" style="flex:1;">
+                        <div class="widget-header">
+                            <h3>İşlem Geçmişi</h3>
+                        </div>
+                        <div id="asset-history-list" class="transaction-list-web" style="max-height: 250px;">
+                        </div>
+                    </div>
+
+                </div>
+
+
+            </div>
+        </main>
+    </div>
+
+    <style>
+        @media (max-width: 900px) {
+            div[style*="grid-template-columns"] {
+                grid-template-columns: 1fr !important;
+            }
+
+            .market-ticker-row {
+                margin-top: 10px;
+            }
+        }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/tr.js"></script>
+    <script src="main.js?v=21"></script>
+</body>
+
+</html>
