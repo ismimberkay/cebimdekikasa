@@ -362,6 +362,8 @@ body.dark-theme .top-bar {
 
 .form-widget {
     grid-area: form;
+    overflow: visible !important;
+    /* Allow dropdowns to overflow */
 }
 
 .history-widget {
@@ -1457,8 +1459,9 @@ body.dark-theme .skeleton::after {
     visibility: hidden;
     transform: translateY(-10px);
     transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    max-height: 250px;
+    max-height: 300px;
     overflow-y: auto;
+
 }
 
 .custom-select-wrapper.open .custom-options {
@@ -4308,7 +4311,7 @@ body.dark-theme button:focus {
    Genişlik 1368px'den küçükse VEYA Yükseklik 768px'den küçükse devreye gir.
    (1368 - 1 = 1367 ve 768 - 1 = 767 sınır değerleridir)
 */
-@media (max-width: 1367px),
+@media (max-width: 1365px),
 (max-height: 767px) {
     #resolution-blocker {
         display: flex !important;
@@ -4319,6 +4322,7 @@ body.dark-theme button:focus {
         display: none !important;
     }
 }
+
 /* --- CUSTOM MODERN MONTH PICKER OVERLAY --- */
 .flatpickr-month-overlay {
     position: absolute;
@@ -4385,7 +4389,8 @@ body.dark-theme button:focus {
 }
 
 .flatpickr-current-month .cur-month::after {
-    content: '\f078'; /* Chevron Down */
+    content: '\f078';
+    /* Chevron Down */
     font-family: 'Font Awesome 6 Free';
     font-weight: 900;
     font-size: 0.7rem;

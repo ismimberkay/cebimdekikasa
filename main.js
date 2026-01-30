@@ -2,7 +2,7 @@ let state = {
     expenses: JSON.parse(localStorage.getItem('exp_logs')) || [],
     cards: JSON.parse(localStorage.getItem('exp_cards')) || [],
     assets: JSON.parse(localStorage.getItem('exp_assets')) || [],
-    methods: JSON.parse(localStorage.getItem('exp_methods')) || ['Nakit'],
+    methods: JSON.parse(localStorage.getItem('exp_methods')) || ['Nakit', 'Havale / EFT'],
     categories: JSON.parse(localStorage.getItem('exp_cats')) || ['Market', 'Yemek', 'Ulaşım', 'Teknoloji', 'Online Alışveriş', 'Fatura', 'Giyim', 'Sağlık', 'Eğlence', 'Diğer'],
     merchants: JSON.parse(localStorage.getItem('exp_merchants')) || [],
 
@@ -441,7 +441,7 @@ function setupAddButton() {
 function addExpense() {
     const merchant = document.getElementById('exp-merchant').value.trim();
     const description = document.getElementById('exp-desc') ? document.getElementById('exp-desc').value.trim() : '';
-    const amount = parseFloat(document.getElementById('exp-amount').value);
+    const amount = roundToTwo(parseFloat(document.getElementById('exp-amount').value));
     const dateVal = document.getElementById('exp-date').value;
     const method = document.getElementById('exp-method-select').value;
     const category = document.getElementById('exp-category-select').value;
@@ -780,7 +780,7 @@ function addCreditExpense() {
     if (!selectedCardId) { showToast('Hata', 'Lütfen harcamanın yapılacağı kartı seçin.', 'error'); return; }
 
     const activeCard = state.cards.find(c => c.id === selectedCardId);
-    const amountVal = parseFloat(document.getElementById('cr-amount').value);
+    const amountVal = roundToTwo(parseFloat(document.getElementById('cr-amount').value));
     const merchant = document.getElementById('cr-merchant').value.trim();
 
     const allCardOps = state.expenses.filter(x => namesMatch(x.method, activeCard.name));
@@ -1360,7 +1360,9 @@ function toggleTheme() {
     state.isDark = !state.isDark;
     localStorage.setItem('dark_mode', state.isDark);
     applyTheme();
-    if (typeof renderChart === 'function') renderChart();
+    if (document.getElementById('expenseChart') && typeof renderChart === 'function') {
+        renderChart();
+    }
 }
 
 function setupModalHTML() {
@@ -1585,10 +1587,17 @@ window.restoreBackup = function (input) {
             const data = JSON.parse(e.target.result);
             if (Array.isArray(data.expenses) && Array.isArray(data.cards)) {
                 // Temel Veriler
+                const defaultMethods = ['Nakit', 'Havale / EFT'];
+                const defaultCats = ['Market', 'Yemek', 'Ulaşım', 'Teknoloji', 'Online Alışveriş', 'Fatura', 'Giyim', 'Sağlık', 'Eğlence', 'Diğer'];
+
+                // Merge Sets to avoid duplicates
+                const methodsSet = new Set([...defaultMethods, ...(data.methods || [])]);
+                const catsSet = new Set([...defaultCats, ...(data.categories || [])]);
+
                 localStorage.setItem('exp_logs', JSON.stringify(data.expenses));
                 localStorage.setItem('exp_cards', JSON.stringify(data.cards));
-                if (data.methods) localStorage.setItem('exp_methods', JSON.stringify(data.methods));
-                if (data.categories) localStorage.setItem('exp_cats', JSON.stringify(data.categories));
+                localStorage.setItem('exp_methods', JSON.stringify([...methodsSet]));
+                localStorage.setItem('exp_cats', JSON.stringify([...catsSet]));
                 if (data.merchants) localStorage.setItem('exp_merchants', JSON.stringify(data.merchants));
 
                 // Yeni Eklenenler (Eksikse boş array atar)
@@ -1601,7 +1610,7 @@ window.restoreBackup = function (input) {
                 if (data.isDark !== undefined) localStorage.setItem('dark_mode', data.isDark);
                 if (data.isPrivacyMode !== undefined) localStorage.setItem('privacy_mode', data.isPrivacyMode);
 
-                showModal('Tamamlandı', 'Tüm veriler başarıyla yüklendi. Sayfa yenileniyor...');
+                showModal('Tamamlandı', 'Tüm veriler başarıyla yüklendi. Eksik kategoriler varsayılanlarla tamamlandı. Sayfa yenileniyor...');
                 setTimeout(() => location.reload(), 1500);
             } else {
                 showModal('Hata', 'Geçersiz veya eski sürüm yedek dosyası.');
@@ -1615,15 +1624,29 @@ window.restoreBackup = function (input) {
 }
 
 window.confirmReset = function () {
-    showModal('DİKKAT!', 'Tüm veriler kalıcı olarak silinecek. Emin misin?', [
+    showModal('DİKKAT!', 'Tüm veriler (Harcamalar, Kartlar, Ayarlar) kalıcı olarak silinecek ve uygulama fabrika ayarlarına dönecek.\n\nBu işlem geri alınamaz!', [
         { text: 'Vazgeç', class: 'btn-cancel', onClick: () => toggleSettingsView(true) },
-        { text: 'Evet, Sil', class: 'btn-delete', onClick: () => { localStorage.clear(); location.reload(); } }
+        {
+            text: 'Evet, Hepsini Sil', class: 'btn-delete', onClick: () => {
+                localStorage.clear();
+                // Extra safety: explicit removal
+                const keys = ['exp_logs', 'exp_cards', 'exp_assets', 'exp_methods', 'exp_cats', 'exp_merchants', 'dark_mode', 'privacy_mode', 'wallet_privacy', 'exp_recurring_plans', 'exp_recurring_income', 'exp_balance_logs'];
+                keys.forEach(k => localStorage.removeItem(k));
+
+                showToast('Sıfırlandı', 'Veriler temizlendi, uygulama yeniden başlatılıyor...', 'success');
+                setTimeout(() => window.location.reload(), 1500);
+            }
+        }
     ]);
 }
 function updatePeriodSelector() { }
 
 function formatMoney(amount) {
     return amount.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+
+function roundToTwo(num) {
+    return Math.round((num + Number.EPSILON) * 100) / 100;
 }
 
 function updateCardActionButton() {
@@ -1780,7 +1803,7 @@ function openPayDebtModal() {
 }
 
 function saveDebtPayment(card) {
-    const amountVal = parseFloat(document.getElementById('debt-payment-amount').value);
+    const amountVal = roundToTwo(parseFloat(document.getElementById('debt-payment-amount').value));
     const dateVal = document.getElementById('debt-payment-date').value;
 
     if (!amountVal || amountVal <= 0) {
@@ -2010,10 +2033,10 @@ async function fetchMarketData() {
 
     // 1. YEDEK VERİLER
     const fallbackData = {
-        'gram-altin': 3050.00,
-        'usd': 34.50,
-        'eur': 37.20,
-        'btc': 3250000
+        'gram-altin': 7550.00,
+        'usd': 43.30,
+        'eur': 53.20,
+        'btc': 0
     };
 
     if (!state.marketData || Object.keys(state.marketData).length === 0) {
@@ -2064,6 +2087,7 @@ async function fetchMarketData() {
 
     } catch (e) {
         console.warn('API Hatası, yedek veriler devrede:', e);
+        showToast('Piyasa Verileri Güncel Değil', 'İnternet bağlantınızı kontrol edin. Son bilinen veya varsayılan değerler gösteriliyor.', 'warning');
         renderMarketTicker();
     }
 }
@@ -2361,7 +2385,7 @@ window.selectRecIcon = function (icon) {
 
 function addRecurringPlan() {
     const name = document.getElementById('rec-name').value.trim();
-    const amount = parseFloat(document.getElementById('rec-amount').value);
+    const amount = roundToTwo(parseFloat(document.getElementById('rec-amount').value));
     const day = parseInt(document.getElementById('rec-day').value);
     const method = document.getElementById('rec-method-select').value;
     const autoPay = document.getElementById('rec-autopay').checked;
@@ -2804,9 +2828,14 @@ function renderSavingsPage() {
             portfolio[t.type].totalCost += (amount * price);
             portfolio[t.type].qty += amount;
         } else {
-            const avg = portfolio[t.type].qty > 0 ? portfolio[t.type].totalCost / portfolio[t.type].qty : 0;
-            portfolio[t.type].qty -= amount;
-            portfolio[t.type].totalCost -= (amount * avg);
+            if (portfolio[t.type].qty <= 0) {
+                portfolio[t.type].qty = 0;
+                portfolio[t.type].totalCost = 0;
+            } else {
+                const avg = portfolio[t.type].totalCost / portfolio[t.type].qty;
+                portfolio[t.type].qty -= amount;
+                portfolio[t.type].totalCost -= (amount * avg);
+            }
         }
         if (portfolio[t.type].qty <= 0.00001) {
             portfolio[t.type].qty = 0;
@@ -2920,8 +2949,8 @@ function openAssetTransactionDetails(id) {
 }
 
 function saveAssetEdit(id, originalItem) {
-    const amount = parseFloat(document.getElementById('edit-asset-amount').value);
-    const price = parseFloat(document.getElementById('edit-asset-price').value);
+    const amount = roundToTwo(parseFloat(document.getElementById('edit-asset-amount').value));
+    const price = roundToTwo(parseFloat(document.getElementById('edit-asset-price').value));
     const dateVal = document.getElementById('edit-asset-date').value;
     const tradeType = document.getElementById('edit-asset-tradeType').value;
 
