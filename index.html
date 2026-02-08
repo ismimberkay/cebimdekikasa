@@ -7,18 +7,17 @@
     <title>Cebimdeki Kasa - Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="design.css?v=21">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="design.css?v=22">
 </head>
 
 <body data-page="dashboard">
-    <!-- Resolution Blocker (Hard Limit) -->
+    <!-- Resolution Warning Banner (Soft Warning) -->
     <div id="resolution-blocker">
-        <i class="fa-solid fa-desktop"></i>
-        <h2>Yetersiz Ekran Çözünürlüğü</h2>
-        <p>Bu uygulama en verimli <strong>1920x1080</strong> çözünürlükte çalışır.</p>
-        <div class="res-badge">Minimum Gereksinim: 1366 x 768 px</div>
-        <p style="font-size:0.9rem; margin-top:15px; opacity:0.7;">Şu anki ekranınız bu sınırın altında.</p>
+        <i class="fa-solid fa-triangle-exclamation res-icon"></i>
+        <span class="res-message"><strong>DİKKAT:</strong> Ekran çözünürlüğünüz yetersiz! Uygulama
+            <strong>1366×768</strong> altında <em>bozuk görünebilir</em> ve <em>düzgün çalışmayabilir</em>. Tarayıcı
+            yakınlaştırmasını azaltın veya daha büyük ekran kullanın.</span>
     </div>
 
     <div class="web-app-container">
@@ -53,10 +52,10 @@
                         </div>
                     </div>
 
-                    <div class="widget summary-widget"
+                    <div class="widget summary-widget wallet-widget"
                         style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
                         <div class="summary-content">
-                            <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+                            <div class="summary-element">
                                 <span class="summary-label" style="color:rgba(255,255,255,0.9);">Cüzdanım /
                                     Varlık</span>
 
@@ -65,9 +64,10 @@
                                 <span id="wallet-total">0.00</span>
                                 <span class="currency">₺</span>
                             </div>
-                            <div class="trend" style="color:rgba(255,255,255,0.8); cursor:pointer;"
-                                onclick="openWalletDetails()">
-                                <i class="fa-solid fa-list"></i> <span>Detaylar & Geçmiş</span>
+
+                            <!-- Yeni Bakiye Ekleme Uyarısı -->
+                            <div class="wallet-warning-cue" onclick="openWalletDetails()">
+                                <i class="fa-solid fa-circle-plus"></i> Gelir / Bakiye Ekle
                             </div>
                         </div>
                         <div class="summary-deco-icon" style="color:rgba(255,255,255,0.2);">

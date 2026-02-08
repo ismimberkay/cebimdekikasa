@@ -88,13 +88,12 @@
 </head>
 
 <body data-page="calendar">
-    <!-- Resolution Blocker (Hard Limit) -->
+    <!-- Resolution Warning Banner (Soft Warning) -->
     <div id="resolution-blocker">
-        <i class="fa-solid fa-desktop"></i>
-        <h2>Yetersiz Ekran Çözünürlüğü</h2>
-        <p>Bu uygulama en verimli <strong>1920x1080</strong> çözünürlükte çalışır.</p>
-        <div class="res-badge">Minimum Gereksinim: 1366 x 768 px</div>
-        <p style="font-size:0.9rem; margin-top:15px; opacity:0.7;">Şu anki ekranınız bu sınırın altında.</p>
+        <i class="fa-solid fa-triangle-exclamation res-icon"></i>
+        <span class="res-message"><strong>⚠️ DİKKAT:</strong> Ekran çözünürlüğünüz yetersiz! Uygulama
+            <strong>1366×768</strong> altında <em>bozuk görünebilir</em> ve <em>düzgün çalışmayabilir</em>. Tarayıcı
+            yakınlaştırmasını azaltın veya daha büyük ekran kullanın.</span>
     </div>
 
     <div class="web-app-container">
@@ -135,6 +134,7 @@
 
         </main>
     </div>
+
     <script src="main.js?v=21"></script>
 </body>
 

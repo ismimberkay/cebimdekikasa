@@ -4309,17 +4309,104 @@ body.dark-theme button:focus {
 
 /* KRİTİK KURAL: 
    Genişlik 1368px'den küçükse VEYA Yükseklik 768px'den küçükse devreye gir.
-   (1368 - 1 = 1367 ve 768 - 1 = 767 sınır değerleridir)
+   GÜNCELLEME: Artık uygulamayı gizlemiyor, modern uyarı banner'ı gösteriyor.
 */
 @media (max-width: 1365px),
 (max-height: 767px) {
     #resolution-blocker {
         display: flex !important;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: auto;
+        padding: 14px 24px;
+        background: linear-gradient(135deg,
+                rgba(239, 68, 68, 0.92) 0%,
+                rgba(220, 38, 38, 0.95) 50%,
+                rgba(185, 28, 28, 0.92) 100%);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        z-index: 99999;
+        flex-direction: row;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        font-size: 0.88rem;
+        color: white;
+        font-weight: 500;
+        box-shadow:
+            0 4px 24px rgba(185, 28, 28, 0.35),
+            0 1px 3px rgba(0, 0, 0, 0.2),
+            inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
-    /* Uygulamayı arkada gizle */
-    .web-app-container {
+    @keyframes slideDown {
+        from {
+            transform: translateY(-100%);
+            opacity: 0;
+        }
+
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    #resolution-blocker i.fa-triangle-exclamation {
+        font-size: 2rem;
+        animation: pulse 1.5s ease-in-out infinite;
+        filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.5));
+        flex-shrink: 0;
+    }
+
+    @keyframes pulse {
+
+        0%,
+        100% {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        50% {
+            opacity: 0.8;
+            transform: scale(1.15);
+        }
+    }
+
+    #resolution-blocker .res-message {
+        flex: 1;
+        text-align: left;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        line-height: 1.4;
+    }
+
+    #resolution-blocker .res-message strong {
+        font-weight: 700;
+        color: #fef08a;
+        /* Sarı vurgu */
+    }
+
+    #resolution-blocker .res-message em {
+        font-style: normal;
+        color: #fecaca;
+        font-weight: 600;
+    }
+
+    /* Eski elementleri gizle (geriye uyumluluk) */
+    #resolution-blocker h2,
+    #resolution-blocker .blocker-hint,
+    #resolution-blocker .res-badge,
+    #resolution-blocker p {
         display: none !important;
+    }
+
+    /* Uygulama görünür kalsın ama üstte boşluk bırak */
+    .web-app-container {
+        display: flex !important;
+        padding-top: 52px;
     }
 }
 
@@ -4404,4 +4491,176 @@ body.dark-theme button:focus {
     transform: rotate(180deg);
     opacity: 1;
     color: var(--primary);
+}
+
+/* ========================================
+   AUTO-SYNC STATUS INDICATOR
+======================================== */
+#sync-status {
+    background: rgba(0, 0, 0, 0.5);
+    color: var(--text-light);
+    padding: 6px 12px;
+    border-radius: 10px;
+    font-size: 0.70rem;
+    font-family: monospace;
+    text-align: center;
+    margin-bottom: 10px;
+    border: 1px solid var(--border);
+    transition: all 0.3s ease;
+}
+
+#sync-status.synced {
+    border-color: var(--success);
+    color: var(--success);
+}
+
+#sync-status.error {
+    border-color: var(--danger);
+    color: var(--danger);
+}
+
+/* İzin gerektiğinde dikkat çekici efekt */
+/* İzin gerektiğinde dikkat çekici efekt - NEON YEŞİL ALERT (İzin İsteği) */
+#sync-status.needs-attention {
+    animation: urgent-pulse 1.5s ease-in-out infinite;
+    font-weight: bold;
+    /* Renkler inline olarak veya özel bir class ile verilecek */
+}
+
+/* İzin reddedildiğinde - NEON KIRMIZI ALERT */
+#sync-status.permission-denied {
+    animation: urgent-pulse 0.8s ease-in-out infinite;
+    box-shadow: 0 0 15px rgba(255, 0, 50, 0.7);
+    background-color: rgba(255, 0, 50, 0.2) !important;
+    border-color: #ff0033 !important;
+    color: #ff0033 !important;
+    font-weight: bold;
+}
+
+@keyframes urgent-pulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(1.05);
+        opacity: 0.9;
+    }
+}
+
+.wallet-warning-cue {
+    margin-top: 15px;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px dashed rgba(255, 255, 255, 0.6);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    animation: soft-pulse 2s infinite;
+}
+
+.wallet-warning-cue:hover {
+    background: rgba(255, 255, 255, 0.25);
+    border-color: #fff;
+}
+
+@keyframes soft-pulse {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.02);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* Cüzdan Widget'ı Özel Hizalama */
+/* Cüzdan Widget'ı Özel Hizalama - SOLA DAYALI */
+.wallet-widget {
+    justify-content: flex-start !important;
+    /* Yatayda Sola Yasla */
+    align-items: center !important;
+    /* Dikeyde Ortala */
+    padding-left: 30px;
+    /* Soldan boşluk */
+}
+
+.wallet-widget .summary-content {
+    align-items: flex-start;
+    /* Sola hizala */
+    text-align: left;
+    /* Sola hizala */
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    z-index: 5;
+    gap: 8px;
+}
+
+.wallet-widget .amount-display {
+    justify-content: flex-start;
+    /* Sola hizala */
+    width: 100%;
+    margin: 5px 0;
+}
+
+.wallet-widget .summary-element {
+    display: flex;
+    justify-content: flex-start;
+    /* Sola hizala */
+    align-items: center;
+    width: 100%;
+}
+
+.wallet-widget .summary-label {
+    width: 100%;
+    text-align: left;
+    /* Sola hizala */
+    display: block;
+}
+
+.wallet-widget .wallet-warning-cue {
+    margin-top: 5px;
+    width: fit-content;
+    align-self: flex-start;
+    /* Sola hizala */
+}
+
+/* Flatpickr Takvim Düzeni Düzeltmesi */
+/* 7 Sütunlu Yapıyı Zorla */
+.flatpickr-calendar {
+    width: auto !important;
+    min-width: 320px !important;
+}
+
+.flatpickr-days {
+    width: 100% !important;
+}
+
+.dayContainer {
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    justify-content: space-around !important;
+    flex-wrap: wrap !important;
+}
+
+span.flatpickr-day {
+    flex-basis: 14.28% !important;
+    /* 1/7 Genişlik */
+    max-width: 14.28% !important;
+    box-sizing: border-box !important;
 }

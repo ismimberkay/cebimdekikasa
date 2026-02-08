@@ -1,3 +1,402 @@
+/* ========================================
+   AUTO-SYNC SYSTEM (File System Access API + IndexedDB)
+   Zero-click cloud sync via Google Drive
+======================================== */
+
+let fileHandle;
+let lastSyncDate = null; // Dosyadaki son kayıt tarihi
+
+// IndexedDB Helper (Dosya iznini tarayıcıda saklamak için)
+const DB_NAME = 'CebimdekiKasaDB';
+const STORE_NAME = 'FileHandleStore';
+
+async function getDb() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, 1);
+        request.onupgradeneeded = (e) => {
+            e.target.result.createObjectStore(STORE_NAME);
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+async function getStoredHandle() {
+    const db = await getDb();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readonly');
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.get('db_handle');
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+    });
+}
+
+async function saveHandle(handle) {
+    const db = await getDb();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        store.put(handle, 'db_handle');
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+    });
+}
+
+async function verifyPermission(handle, withWrite = false) {
+    const options = { mode: withWrite ? 'readwrite' : 'read' };
+    if ((await handle.queryPermission(options)) === 'granted') {
+        return true;
+    }
+    if ((await handle.requestPermission(options)) === 'granted') {
+        return true;
+    }
+    return false;
+}
+
+// --- OTOMATİK YÜKLEME VE KAYDETME ---
+
+// --- GÜNCELLENMİŞ initAutoSync (SecurityError Düzeltildi) ---
+
+async function initAutoSync() {
+    const statusEl = document.getElementById('sync-status');
+    if (!statusEl) return;
+
+    try {
+        fileHandle = await getStoredHandle();
+
+        if (fileHandle) {
+            // 1. Dosya sistemi izni varsa (Otomatik Mod)
+            const options = { mode: 'readwrite' };
+            const permission = await fileHandle.queryPermission(options);
+
+            if (permission === 'granted') {
+                await loadFromFile();
+            } else {
+                // İzin düşmüşse
+                statusEl.innerHTML = '<i class="fa-solid fa-lock"></i> İzin Ver (Tıkla)';
+                statusEl.className = 'needs-attention';
+
+                // CSS'ten renkleri kaldırdığımız için manuel ekliyoruz:
+                statusEl.style.backgroundColor = 'rgba(57, 255, 20, 0.15)';
+                statusEl.style.borderColor = '#39ff14';
+                statusEl.style.color = '#39ff14';
+                statusEl.style.boxShadow = '0 0 15px rgba(57, 255, 20, 0.6)';
+
+                statusEl.style.cursor = 'pointer';
+                statusEl.style.pointerEvents = 'auto';
+
+                statusEl.onclick = async () => {
+                    try {
+                        if ((await fileHandle.requestPermission(options)) === 'granted') {
+                            await loadFromFile();
+                            statusEl.onclick = null;
+                        } else {
+                            statusEl.innerHTML = 'İzin Reddedildi';
+                            statusEl.classList.add('permission-denied');
+                        }
+                    } catch (e) { console.error(e); }
+                };
+            }
+        } else {
+            // 2. Dosya sistemi YOKSA (Manuel Mod / Yedek Yükle Modu)
+            // LocalStorage'dan son tarihi çek
+            const lastSync = localStorage.getItem('exp_last_sync');
+            if (lastSync) {
+                lastSyncDate = new Date(lastSync);
+            }
+
+            // Renk ve durum hesaplamasını 'updateSyncStatus'a bırak
+            updateSyncStatus();
+        }
+    } catch (err) {
+        console.error("Sync Error:", err);
+        statusEl.innerHTML = '<i class="fa-solid fa-exclamation-triangle"></i> Hata';
+        statusEl.classList.add('error');
+    }
+}
+
+async function loadFromFile() {
+    const statusEl = document.getElementById('sync-status');
+    if (!statusEl || !fileHandle) return;
+
+    statusEl.innerHTML = '<i class="fa-solid fa-rotate fa-spin"></i> Yükleniyor...';
+    statusEl.style.backgroundColor = '';
+    statusEl.style.borderColor = '';
+    statusEl.style.color = '';
+
+    try {
+        const file = await fileHandle.getFile();
+        const text = await file.text();
+
+        // Dosya boşsa, yeni başlangıç verisi oluştur
+        if (!text.trim()) {
+            console.log('Dosya boş, varsayılan verilerle devam ediliyor.');
+            updateSyncStatus();
+            return;
+        }
+
+        let data;
+        try {
+            data = JSON.parse(text);
+        } catch (parseErr) {
+            console.error('JSON parse hatası:', parseErr);
+            statusEl.innerHTML = '<i class="fa-solid fa-exclamation-triangle"></i> Geçersiz JSON';
+            statusEl.classList.add('error');
+            return;
+        }
+
+        // State'i güncelle (eski format desteği dahil)
+        if (data.expenses) state.expenses = data.expenses;
+        if (data.cards) state.cards = data.cards;
+        if (data.assets) state.assets = data.assets;
+        if (data.methods) state.methods = data.methods;
+        if (data.categories) state.categories = data.categories;
+        if (data.merchants) state.merchants = data.merchants;
+        if (data.recurringPlans) state.recurringPlans = data.recurringPlans;
+        if (data.recurringIncome) state.recurringIncome = data.recurringIncome;
+        if (data.balanceLogs) state.balanceLogs = data.balanceLogs;
+        if (data.isDark !== undefined) state.isDark = data.isDark;
+        if (data.isPrivacyMode !== undefined) state.isPrivacyMode = data.isPrivacyMode;
+
+        // Son kayıt tarihini sakla (lastSync yoksa dosya adından veya tarihi kullan)
+        if (data.lastSync) {
+            lastSyncDate = new Date(data.lastSync);
+            console.log('lastSync JSON\'dan alındı:', data.lastSync);
+        } else {
+            // Dosya adından tarihi çıkarmayı dene (YYYY-MM-DD veya DD.MM.YYYY formatları)
+            const fileName = file.name;
+            const isoMatch = fileName.match(/(\d{4})-(\d{2})-(\d{2})/); // YYYY-MM-DD
+            const trMatch = fileName.match(/(\d{2})\.(\d{2})\.(\d{4})/); // DD.MM.YYYY
+
+            if (isoMatch) {
+                lastSyncDate = new Date(isoMatch[1], parseInt(isoMatch[2]) - 1, isoMatch[3]);
+                console.log('Tarih dosya adından alındı (ISO):', fileName, '→', lastSyncDate);
+            } else if (trMatch) {
+                lastSyncDate = new Date(trMatch[3], parseInt(trMatch[2]) - 1, trMatch[1]);
+                console.log('Tarih dosya adından alındı (TR):', fileName, '→', lastSyncDate);
+            } else {
+                // Hiçbir format bulunamazsa dosya tarihini kullan
+                lastSyncDate = new Date(file.lastModified);
+                console.log('Dosya adında tarih yok, dosya tarihi kullanıldı:', lastSyncDate);
+            }
+        }
+        console.log('Son yedek tarihi:', lastSyncDate.toLocaleDateString('tr-TR'));
+
+        // LocalStorage'ı da güncelle
+        localStorage.setItem('exp_logs', JSON.stringify(state.expenses));
+        localStorage.setItem('exp_cards', JSON.stringify(state.cards));
+        localStorage.setItem('exp_assets', JSON.stringify(state.assets));
+        localStorage.setItem('exp_methods', JSON.stringify(state.methods));
+        localStorage.setItem('exp_cats', JSON.stringify(state.categories));
+        localStorage.setItem('exp_merchants', JSON.stringify(state.merchants));
+        localStorage.setItem('exp_recurring_plans', JSON.stringify(state.recurringPlans));
+        localStorage.setItem('exp_recurring_income', JSON.stringify(state.recurringIncome));
+        localStorage.setItem('exp_balance_logs', JSON.stringify(state.balanceLogs));
+
+        // Tema uygula
+        if (data.isDark !== undefined) {
+            localStorage.setItem('dark_mode', data.isDark);
+            applyTheme();
+        }
+
+        // Ekranı yenile (Sadece aktif sayfada)
+        const page = document.body.dataset.page || 'dashboard';
+
+        if (page === 'dashboard' && typeof updateDashboard === 'function') updateDashboard();
+        if (page === 'expenses' && typeof renderFullHistory === 'function') renderFullHistory();
+        if (page === 'credit' && typeof renderCreditPage === 'function') renderCreditPage();
+        if (page === 'credit' && typeof updateStatementView === 'function') updateStatementView();
+        if (page === 'savings' && typeof renderSavingsPage === 'function') renderSavingsPage();
+        if (page === 'recurring' && typeof renderRecurringList === 'function') renderRecurringList();
+        if (page === 'calendar' && typeof renderCalendarPage === 'function') renderCalendarPage();
+
+        updateSyncStatus();
+    } catch (err) {
+        console.error('Dosya okuma hatası:', err);
+        statusEl.innerHTML = '<i class="fa-solid fa-exclamation-triangle"></i> Okuma hatası';
+        statusEl.classList.add('error');
+        statusEl.style.cursor = 'pointer';
+        statusEl.style.pointerEvents = 'auto';
+        statusEl.onclick = () => location.reload();
+    }
+}
+
+async function saveToFile() {
+    const statusEl = document.getElementById('sync-status');
+    if (!fileHandle || !statusEl) return;
+
+    statusEl.innerHTML = '<i class="fa-solid fa-pen-nib"></i> Kaydediliyor...';
+
+    try {
+        const dataToSave = {
+            expenses: state.expenses,
+            cards: state.cards,
+            assets: state.assets,
+            methods: state.methods,
+            categories: state.categories,
+            merchants: state.merchants,
+            recurringPlans: state.recurringPlans,
+            recurringIncome: state.recurringIncome,
+            balanceLogs: state.balanceLogs,
+            isDark: state.isDark,
+            isPrivacyMode: state.isPrivacyMode,
+            lastSync: new Date().toISOString()
+        };
+
+        const writable = await fileHandle.createWritable();
+        await writable.write(JSON.stringify(dataToSave, null, 2));
+        await writable.close();
+
+        updateSyncStatus(true);
+    } catch (err) {
+        console.error('Dosya yazma hatası:', err);
+        statusEl.innerHTML = '<i class="fa-solid fa-exclamation-triangle"></i> Kayıt hatası';
+        statusEl.classList.add('error');
+    }
+}
+
+// Senkronizasyon dosyasını değiştir (Ayarlar'dan seçilebilir)
+window.changeSyncFile = async function () {
+    try {
+        [fileHandle] = await window.showOpenFilePicker({
+            types: [{
+                description: 'JSON Veritabanı',
+                accept: { 'application/json': ['.json'] }
+            }]
+        });
+        await saveHandle(fileHandle);
+        await loadFromFile();
+        showToast('Dosya Değiştirildi', 'Yeni yedek dosyası seçildi ve yüklendi.', 'success');
+    } catch (e) {
+        if (e.name !== 'AbortError') {
+            console.error('Dosya değiştirme hatası:', e);
+            showToast('Hata', 'Dosya seçilemedi.', 'error');
+        }
+    }
+};
+
+function updateSyncStatus(justSaved = false) {
+    const statusEl = document.getElementById('sync-status');
+    if (!statusEl) return;
+
+    // Stilleri sıfırla
+    statusEl.style.backgroundColor = '';
+    statusEl.style.borderColor = '';
+    statusEl.style.color = '';
+    statusEl.classList.remove('error', 'synced', 'needs-attention');
+
+    // Eğer yeni kaydettiyse tarihi güncelle
+    if (justSaved) {
+        lastSyncDate = new Date();
+        // Manuel moddaysa localStorage'ı da güncelle ki reload edince tarih gitmesin
+        if (!fileHandle) {
+            localStorage.setItem('exp_last_sync', lastSyncDate.toISOString());
+        }
+    }
+
+    // TIKLAMA OLAYI AYARI (Kritik Düzeltme Burası)
+    if (!fileHandle) {
+        // Otomatik bağlantı yoksa, butona basınca YEDEK YÜKLEME inputu çalışsın
+        statusEl.style.cursor = 'pointer';
+        statusEl.style.pointerEvents = 'auto';
+        statusEl.onclick = () => {
+            const globalInput = document.getElementById('global-restore-input');
+            if (globalInput) globalInput.click();
+            else alert('Hata: global-restore-input bulunamadı!');
+        };
+    } else {
+        // Otomatik bağlantı varsa tıklama işlevsiz olsun (zaten otomatiktir)
+        statusEl.style.pointerEvents = 'none';
+        statusEl.style.cursor = 'default';
+        statusEl.onclick = null;
+    }
+
+    // TARİH HESAPLAMA VE RENKLENDİRME
+    if (!lastSyncDate) {
+        // Tarih hiç yoksa -> "Yedek Yükle" butonu gibi davran
+        statusEl.innerHTML = '<i class="fa-solid fa-upload"></i> Yedek Yükle';
+        statusEl.style.backgroundColor = 'rgba(67, 97, 238, 0.2)'; // Mavi ton
+        statusEl.style.borderColor = 'var(--primary)';
+        statusEl.style.color = 'var(--primary)';
+        return;
+    }
+
+    const now = new Date();
+    const diffMs = now - lastSyncDate;
+    const diffDays = diffMs / (1000 * 60 * 60 * 24);
+
+    // Tarih formatı
+    const day = String(lastSyncDate.getDate()).padStart(2, '0');
+    const month = String(lastSyncDate.getMonth() + 1).padStart(2, '0');
+    const year = lastSyncDate.getFullYear();
+    const dateStr = `${day}.${month}.${year}`;
+
+    let icon, text, bgColor, borderColor, textColor, boxShadow;
+
+    if (diffDays <= 3) {
+        // YEŞİL: 0-3 gün (Güncel)
+        icon = fileHandle ? 'fa-rotate' : 'fa-check'; // Oto ise sync ikonu, manuel ise tik
+        text = `Yakın zamanda yedeklendi! <br> ${dateStr}`;
+        bgColor = 'rgba(46, 204, 113, 0.2)';
+        borderColor = '#2ecc71';
+        textColor = '#2ecc71';
+        boxShadow = 'none';
+    } else if (diffDays <= 5) {
+        // SARI: 3-5 gün (Eskiyor)
+        icon = 'fa-clock';
+        text = ` <strong>DİKKAT!</strong> <br> Verileriniz kaybolabilir! <br> Son yedek:${dateStr}`;
+        bgColor = 'rgba(255, 159, 28, 0.2)';
+        borderColor = '#ff9f1c';
+        textColor = '#ff9f1c';
+        boxShadow = '0 0 10px rgba(255, 159, 28, 0.4)';
+    } else {
+        // KIRMIZI: 5+ gün (Kritik)
+        icon = 'fa-exclamation-triangle';
+        text = `Son yedek tarihi çok eski! Hemen yedekleme yapın! <br> ${dateStr}`;
+        bgColor = 'rgba(231, 76, 60, 0.2)';
+        borderColor = '#e74c3c';
+        textColor = '#e74c3c';
+        boxShadow = '0 0 15px rgba(231, 76, 60, 0.6)';
+
+        // Kritik durumda dikkat çeksin (CSS'teki animasyon çalışsın)
+        statusEl.classList.add('needs-attention');
+    }
+
+    statusEl.innerHTML = `<i class="fa-solid ${icon}"></i> ${text}`;
+    statusEl.style.backgroundColor = bgColor;
+    statusEl.style.borderColor = borderColor;
+    statusEl.style.color = textColor;
+    statusEl.style.boxShadow = boxShadow;
+}
+
+// Tarihli dosya adı formatı: "08.02.2026 tarihli Cebimdeki Kasa.json"
+function getBackupFileName() {
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const year = now.getFullYear();
+    return `${day}.${month}.${year} tarihli Cebimdeki Kasa.json`;
+}
+
+// saveData - Tüm kayıt işlemlerini merkezi yönetir
+function saveData() {
+    localStorage.setItem('exp_logs', JSON.stringify(state.expenses));
+    localStorage.setItem('exp_cards', JSON.stringify(state.cards));
+    localStorage.setItem('exp_assets', JSON.stringify(state.assets));
+    localStorage.setItem('exp_methods', JSON.stringify(state.methods));
+    localStorage.setItem('exp_cats', JSON.stringify(state.categories));
+    localStorage.setItem('exp_merchants', JSON.stringify(state.merchants));
+    localStorage.setItem('exp_recurring_plans', JSON.stringify(state.recurringPlans));
+    localStorage.setItem('exp_recurring_income', JSON.stringify(state.recurringIncome));
+    localStorage.setItem('exp_balance_logs', JSON.stringify(state.balanceLogs));
+
+    // Otomatik Dosyaya Yazma
+    saveToFile();
+}
+
+/* ======================================== */
+
 let state = {
     expenses: JSON.parse(localStorage.getItem('exp_logs')) || [],
     cards: JSON.parse(localStorage.getItem('exp_cards')) || [],
@@ -16,8 +415,81 @@ let state = {
     isWalletHidden: localStorage.getItem('wallet_privacy') === 'true',
     recurringPlans: JSON.parse(localStorage.getItem('exp_recurring_plans')) || [],
     recurringIncome: JSON.parse(localStorage.getItem('exp_recurring_income')) || [],
-    balanceLogs: JSON.parse(localStorage.getItem('exp_balance_logs')) || []
+    balanceLogs: JSON.parse(localStorage.getItem('exp_balance_logs')) || [],
+    dataVersion: parseInt(localStorage.getItem('exp_data_version')) || 1 // v1=TL float, v2=kuruş int
 };
+
+/**
+ * Migrates all monetary values from TL (float) to Kuruş (integer)
+ * Called once on first load after update, then dataVersion is set to 2
+ */
+function migrateToKurus() {
+    if (state.dataVersion >= 2) return; // Already migrated
+
+    console.log('[Migration] Starting TL → Kuruş conversion...');
+
+    // Helper: Check if value looks like TL (has decimals or is small)
+    const needsMigration = (val) => {
+        if (val === null || val === undefined) return false;
+        const num = Number(val);
+        // If it has decimals OR is reasonably small (< 100000), it's probably TL
+        return !Number.isInteger(num) || num < 100000;
+    };
+
+    // Migrate expenses
+    state.expenses.forEach(exp => {
+        if (needsMigration(exp.amount)) {
+            exp.amount = Math.round(Number(exp.amount) * 100);
+        }
+    });
+
+    // Migrate cards (limit)
+    state.cards.forEach(card => {
+        if (needsMigration(card.limit)) {
+            card.limit = Math.round(Number(card.limit) * 100);
+        }
+    });
+
+    // Migrate assets (price, amount stays as quantity)
+    state.assets.forEach(asset => {
+        if (needsMigration(asset.price)) {
+            asset.price = Math.round(Number(asset.price) * 100);
+        }
+    });
+
+    // Migrate balanceLogs
+    state.balanceLogs.forEach(log => {
+        if (needsMigration(log.amount)) {
+            log.amount = Math.round(Number(log.amount) * 100);
+        }
+    });
+
+    // Migrate recurringPlans
+    state.recurringPlans.forEach(plan => {
+        if (needsMigration(plan.amount)) {
+            plan.amount = Math.round(Number(plan.amount) * 100);
+        }
+        if (needsMigration(plan.cashbackValue)) {
+            plan.cashbackValue = Math.round(Number(plan.cashbackValue) * 100);
+        }
+    });
+
+    // Migrate recurringIncome
+    state.recurringIncome.forEach(inc => {
+        if (needsMigration(inc.amount)) {
+            inc.amount = Math.round(Number(inc.amount) * 100);
+        }
+    });
+
+    // Mark as migrated
+    state.dataVersion = 2;
+    localStorage.setItem('exp_data_version', '2');
+
+    // Save all migrated data
+    saveData();
+
+    console.log('[Migration] Complete! All values now in kuruş (integer cents)');
+}
 
 // Robust Name Matching Helper
 function namesMatch(n1, n2) {
@@ -73,14 +545,20 @@ function renderSidebar() {
                 ${navHtml}
             </nav>
         </div>
-        <div class="sidebar-footer" style="display:flex; gap:10px;">
-            <button onclick="togglePrivacyMode()" class="sidebar-privacy-btn" title="Gizlilik Modu">
-                <i class="fa-solid fa-eye-slash"></i>
-            </button>
-            <button id="theme-btn" class="sidebar-theme-btn" style="flex:2;">
-                <i class="fa-solid fa-moon"></i>
-                <span>Tema Değiştir</span>
-            </button>
+        <div class="sidebar-footer">
+            <div id="sync-status"><i class="fa-solid fa-circle-notch fa-spin"></i> Bağlantı...</div>
+            <!-- Global Restore Input (Hidden) -->
+            <input type="file" id="global-restore-input" accept=".json" style="display: none;" onchange="window.restoreBackup(event)">
+            
+            <div style="display:flex; gap:10px;">
+                <button onclick="togglePrivacyMode()" class="sidebar-privacy-btn" title="Gizlilik Modu">
+                    <i class="fa-solid fa-eye-slash"></i>
+                </button>
+                <button id="theme-btn" class="sidebar-theme-btn" style="flex:2;">
+                    <i class="fa-solid fa-moon"></i>
+                    <span>Tema Değiştir</span>
+                </button>
+            </div>
         </div>
     `;
 }
@@ -106,6 +584,7 @@ function setFavicon() {
 }
 
 function init() {
+    migrateToKurus(); // Convert TL → Kuruş if needed (v1→v2)
     renderSidebar(); // Auto-render sidebar
     setFavicon();    // Auto-set favicon
     applyTheme();
@@ -263,6 +742,9 @@ function init() {
     }
 
     checkBackupUsage();
+
+    // AUTO-SYNC INIT (File System Access API)
+    initAutoSync();
 
     // GLOBAL FLATPICKR INIT
     setTimeout(() => {
@@ -441,13 +923,13 @@ function setupAddButton() {
 function addExpense() {
     const merchant = document.getElementById('exp-merchant').value.trim();
     const description = document.getElementById('exp-desc') ? document.getElementById('exp-desc').value.trim() : '';
-    const amount = roundToTwo(parseFloat(document.getElementById('exp-amount').value));
+    const amountKurus = toKurus(parseFloat(document.getElementById('exp-amount').value)); // Store in kuruş
     const dateVal = document.getElementById('exp-date').value;
     const method = document.getElementById('exp-method-select').value;
     const category = document.getElementById('exp-category-select').value;
     const isRecurring = document.getElementById('exp-recurring') ? document.getElementById('exp-recurring').checked : false;
 
-    if (merchant && amount > 0 && isValidDate(dateVal)) {
+    if (merchant && amountKurus > 0 && isValidDate(dateVal)) {
         const linkedCard = state.cards.find(c => c.name === method);
 
         if (linkedCard) {
@@ -457,7 +939,9 @@ function addExpense() {
 
         state.expenses.push({
             id: Date.now(),
-            merchant, description, amount, method, category,
+            merchant, description,
+            amount: amountKurus, // Now in kuruş
+            method, category,
             isoDate: dateVal, date: formatDateTR(dateVal),
             isCredit: false,
             isRecurring: isRecurring,
@@ -469,7 +953,7 @@ function addExpense() {
         state.balanceLogs.push({
             id: Date.now() + 1, // Ensure unique ID from expense
             title: merchant, // Use merchant name as description
-            amount: -amount, // Negative amount for expense
+            amount: -amountKurus, // Negative kuruş for expense
             date: dateVal,
             createdAt: new Date().toISOString()
         });
@@ -780,7 +1264,7 @@ function addCreditExpense() {
     if (!selectedCardId) { showToast('Hata', 'Lütfen harcamanın yapılacağı kartı seçin.', 'error'); return; }
 
     const activeCard = state.cards.find(c => c.id === selectedCardId);
-    const amountVal = roundToTwo(parseFloat(document.getElementById('cr-amount').value));
+    const amountVal = toKurus(parseFloat(document.getElementById('cr-amount').value)); // Store in kuruş
     const merchant = document.getElementById('cr-merchant').value.trim();
 
     const allCardOps = state.expenses.filter(x => namesMatch(x.method, activeCard.name));
@@ -801,10 +1285,15 @@ function addCreditExpense() {
     saveMerchant(merchant);
 
     const baseDate = new Date(dateInput);
-    const monthlyAmount = amountVal / installments;
+    // Integer-safe installment splitting (avoid floating point issues)
+    const totalAmountKurus = amountVal;
+    const baseInstallment = Math.floor(totalAmountKurus / installments);
+    const remainder = totalAmountKurus % installments;
 
     for (let i = 0; i < installments; i++) {
         const nextDate = new Date(baseDate);
+        // Remainder goes to first installment
+        const currentInstallmentAmount = baseInstallment + (i === 0 ? remainder : 0);
 
         // FIX: Handle 31st day overflow (e.g. Jan 31 -> Feb 28/29)
         const expectedMonth = (baseDate.getMonth() + i) % 12;
@@ -820,7 +1309,7 @@ function addCreditExpense() {
         state.expenses.push({
             id: generateUniqueId(), // HATA 4 FIX: Use unique ID generator
             merchant: installments > 1 ? `${merchant} (${i + 1}/${installments})` : merchant,
-            amount: monthlyAmount,
+            amount: currentInstallmentAmount, // Integer guaranteed
             method: activeCard.name,
             category: category,
             isoDate: iso,
@@ -836,7 +1325,7 @@ function addCreditExpense() {
     document.getElementById('cr-amount').value = '';
     if (document.getElementById('cr-recurring')) document.getElementById('cr-recurring').checked = false;
 
-    showToast('Başarılı', isRecurring ? 'Abonelik karta tanımlandı.' : `${amountVal}TL karta işlendi.`, 'success');
+    showToast('Başarılı', isRecurring ? 'Abonelik karta tanımlandı.' : `${formatMoney(amountVal)} TL karta işlendi.`, 'success'); // formatMoney for display
 
     if (state.activeViewCardId === 'all' || state.activeViewCardId === selectedCardId) {
         updatePeriodSelector();
@@ -886,7 +1375,7 @@ function openCardManagerModal() {
 function saveCardProcess(editId = null) {
     const name = document.getElementById('new-card-name').value.trim();
     const cutoff = parseInt(document.getElementById('new-card-cutoff').value);
-    const limit = parseFloat(document.getElementById('new-card-limit').value);
+    const limit = toKurus(parseFloat(document.getElementById('new-card-limit').value)); // Store in kuruş
     const brand = document.getElementById('new-card-brand').value;
     const last4 = document.getElementById('new-card-last4').value;
 
@@ -897,7 +1386,7 @@ function saveCardProcess(editId = null) {
                 const oldName = state.cards[cardIndex].name;
                 state.cards[cardIndex].name = name;
                 state.cards[cardIndex].cutoff = cutoff;
-                state.cards[cardIndex].limit = limit;
+                state.cards[cardIndex].limit = limit; // Already in kuruş
                 state.cards[cardIndex].brand = brand;
                 state.cards[cardIndex].last4 = last4;
 
@@ -1422,7 +1911,12 @@ window.openDetails = function (id) {
     const html = `
         <div class="modal-input-group"><label>Yer</label><input id="edit-merch" value="${item.merchant}"></div>
         <div class="modal-input-group"><label>Tutar</label><input type="number" id="edit-amount" value="${item.amount}"></div>
-        <div class="modal-input-group"><label>Tarih</label><input type="date" id="edit-date" value="${item.isoDate}"></div>
+        <div class="modal-input-group"><label>Tarih</label>
+            <div class="input-wrapper" style="position:relative;">
+                <input type="date" id="edit-date" value="${item.isoDate}" style="padding-left:40px !important;">
+                <i class="fa-regular fa-calendar" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text-light); pointer-events:none;"></i>
+            </div>
+        </div>
         ${item.recurringPlanId ? `<div style="padding:10px; background:rgba(67,97,238,0.1); border-radius:8px; font-size:0.85rem; color:var(--primary); margin-bottom:15px; border-left:4px solid var(--primary);">
             <i class="fa-solid fa-clock-rotate-left"></i> Bu harcama bir <strong>Düzenli Gider</strong> planından otomatik oluşturulmuştur.
         </div>` : ''}
@@ -1472,6 +1966,19 @@ window.openDetails = function (id) {
             }
         }
     ]);
+
+    // Initialize Flatpickr for "Tarih" input in Edit Modal
+    if (window.flatpickr) {
+        flatpickr("#edit-date", {
+            locale: "tr",
+            dateFormat: "Y-m-d",
+            altInput: true,
+            altFormat: "d F Y",
+            defaultDate: item.isoDate,
+            disableMobile: true,
+            theme: "dark" // Our CSS overrides layout
+        });
+    }
 };
 
 function deleteExpense(id) {
@@ -1560,18 +2067,20 @@ window.downloadBackup = function () {
         methods: state.methods,
         categories: state.categories,
         merchants: state.merchants,
-        recurringPlans: state.recurringPlans,     // EKLENDİ
-        recurringIncome: state.recurringIncome,   // EKLENDİ
-        balanceLogs: state.balanceLogs,           // EKLENDİ
-        assets: state.assets,                     // EKLENDİ
+        recurringPlans: state.recurringPlans,
+        recurringIncome: state.recurringIncome,
+        balanceLogs: state.balanceLogs,
+        assets: state.assets,
         isDark: state.isDark,
-        isPrivacyMode: state.isPrivacyMode
+        isPrivacyMode: state.isPrivacyMode,
+        dataVersion: state.dataVersion, // Track currency format version
+        lastSync: new Date().toISOString()
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `cebimdeki_kasa_tam_yedek_${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = getBackupFileName();
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -1579,8 +2088,21 @@ window.downloadBackup = function () {
 }
 
 // YENİ GERİ YÜKLEME FONKSİYONU
-window.restoreBackup = function (input) {
-    const file = input.files[0]; if (!file) return;
+window.changeSyncFile = function () {
+    const input = document.getElementById('restore-file-input');
+    if (input) input.click();
+    else console.error('Restore input not found!');
+};
+
+window.restoreBackup = function (eventOrInput) {
+    // Handle both direct element pass and event object
+    let input = eventOrInput;
+    if (eventOrInput.target && eventOrInput.target.files) {
+        input = eventOrInput.target;
+    }
+
+    const file = input.files && input.files[0];
+    if (!file) return;
     const reader = new FileReader();
     reader.onload = (e) => {
         try {
@@ -1610,7 +2132,42 @@ window.restoreBackup = function (input) {
                 if (data.isDark !== undefined) localStorage.setItem('dark_mode', data.isDark);
                 if (data.isPrivacyMode !== undefined) localStorage.setItem('privacy_mode', data.isPrivacyMode);
 
-                showModal('Tamamlandı', 'Tüm veriler başarıyla yüklendi. Eksik kategoriler varsayılanlarla tamamlandı. Sayfa yenileniyor...');
+                // Yedekleme Tarihini Kaydet (Görünürlük için)
+                let backupDate = null;
+
+                if (data.lastSync) {
+                    backupDate = new Date(data.lastSync);
+                } else {
+                    // 1. Dosya adından YYYY-MM-DD (2026-02-05)
+                    const isoMatch = file.name.match(/(\d{4})-(\d{2})-(\d{2})/);
+                    if (isoMatch) {
+                        backupDate = new Date(`${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}T12:00:00`);
+                    } else {
+                        // 2. Dosya adından DD.MM.YYYY (05.02.2026)
+                        const dotMatch = file.name.match(/(\d{2})\.(\d{2})\.(\d{4})/);
+                        if (dotMatch) {
+                            backupDate = new Date(`${dotMatch[3]}-${dotMatch[2]}-${dotMatch[1]}T12:00:00`);
+                        } else if (file.lastModified) {
+                            // 3. Dosya metadatasından
+                            backupDate = new Date(file.lastModified);
+                        }
+                    }
+                }
+
+                if (!backupDate || isNaN(backupDate.getTime())) {
+                    backupDate = new Date(); // Fallback to now
+                }
+
+                localStorage.setItem('exp_last_sync', backupDate.toISOString());
+
+                // Reset dataVersion to trigger migration on reload (for legacy backups)
+                if (!data.dataVersion || data.dataVersion < 2) {
+                    localStorage.setItem('exp_data_version', '1');
+                } else {
+                    localStorage.setItem('exp_data_version', data.dataVersion.toString());
+                }
+
+                showModal('Tamamlandı', 'Tüm veriler başarıyla yüklendi. Sayfa yenileniyor...');
                 setTimeout(() => location.reload(), 1500);
             } else {
                 showModal('Hata', 'Geçersiz veya eski sürüm yedek dosyası.');
@@ -1622,6 +2179,15 @@ window.restoreBackup = function (input) {
     };
     reader.readAsText(file);
 }
+
+// Dinamik içerik için Event Delegation (Akıllı Dinleyici)
+// Bu kod, settings sayfası sonradan yüklense bile dosya seçimini yakalar.
+document.addEventListener('change', function (e) {
+    if (e.target && e.target.id === 'restore-file-input') {
+        console.log("[Restore] Yedek dosyası seçildi, işlem başlatılıyor...");
+        restoreBackup(e.target);
+    }
+});
 
 window.confirmReset = function () {
     showModal('DİKKAT!', 'Tüm veriler (Harcamalar, Kartlar, Ayarlar) kalıcı olarak silinecek ve uygulama fabrika ayarlarına dönecek.\n\nBu işlem geri alınamaz!', [
@@ -1641,10 +2207,43 @@ window.confirmReset = function () {
 }
 function updatePeriodSelector() { }
 
-function formatMoney(amount) {
-    return amount.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+// === KURUŞ (INTEGER CURRENCY) HELPER FUNCTIONS ===
+// Tüm parasal değerler kuruş cinsinden (integer) saklanır
+// 100.50 TL = 10050 kuruş
+
+/**
+ * TL değerini kuruşa çevirir (kayıt için)
+ * @param {number} tl - TL cinsinden değer (örn: 100.50)
+ * @returns {number} - Kuruş cinsinden integer değer (örn: 10050)
+ */
+function toKurus(tl) {
+    if (tl === null || tl === undefined || isNaN(tl)) return 0;
+    return Math.round(Number(tl) * 100);
 }
 
+/**
+ * Kuruşu TL'ye çevirir (görüntüleme için)
+ * @param {number} kurus - Kuruş cinsinden integer değer
+ * @returns {number} - TL cinsinden değer
+ */
+function toTL(kurus) {
+    if (kurus === null || kurus === undefined || isNaN(kurus)) return 0;
+    return Number(kurus) / 100;
+}
+
+/**
+ * Kuruş değerini formatlı TL string'e çevirir
+ * @param {number} kurus - Kuruş cinsinden integer değer
+ * @returns {string} - Formatlı TL (örn: "1.234,50")
+ */
+function formatMoney(kurus) {
+    const tl = toTL(kurus);
+    return tl.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+
+/**
+ * @deprecated - Use toKurus() instead for new code
+ */
 function roundToTwo(num) {
     return Math.round((num + Number.EPSILON) * 100) / 100;
 }
@@ -1803,7 +2402,7 @@ function openPayDebtModal() {
 }
 
 function saveDebtPayment(card) {
-    const amountVal = roundToTwo(parseFloat(document.getElementById('debt-payment-amount').value));
+    const amountVal = toKurus(parseFloat(document.getElementById('debt-payment-amount').value)); // Store in kuruş
     const dateVal = document.getElementById('debt-payment-date').value;
 
     if (!amountVal || amountVal <= 0) {
@@ -2156,7 +2755,9 @@ function renderMarketTicker() {
     let html = '';
     items.forEach(item => {
         const val = state.marketData[item.key];
-        const displayVal = val > 0 ? formatMoney(val) : '-';
+        // FIX: formatMoney expects Kuruş (divides by 100), but marketData is already in TL.
+        // So we use toLocaleString directly.
+        const displayVal = val > 0 ? val.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-';
         const isSavings = window.location.pathname.includes('savings.html');
         const clickAttr = isSavings ? `onclick="document.getElementById('asset-type').value='${item.key}'; document.getElementById('asset-price').value='${val}'; initCustomSelect('asset-type');"` : '';
 
@@ -2175,11 +2776,11 @@ function renderMarketTicker() {
 
 function handleAssetTrade(type) {
     const assetType = document.getElementById('asset-type').value;
-    const amount = parseFloat(document.getElementById('asset-amount').value);
-    const price = parseFloat(document.getElementById('asset-price').value);
+    const amount = parseFloat(document.getElementById('asset-amount').value); // Asset quantity stays float
+    const priceKurus = toKurus(parseFloat(document.getElementById('asset-price').value)); // Store in kuruş
     const dateVal = document.getElementById('asset-date').value;
 
-    if (!amount || amount <= 0 || !price || !dateVal) {
+    if (!amount || amount <= 0 || !priceKurus || !dateVal) {
         showToast('Hata', 'Miktar ve fiyat giriniz.', 'error');
         return;
     }
@@ -2198,8 +2799,8 @@ function handleAssetTrade(type) {
     const trade = {
         id: Date.now(),
         type: assetType,
-        amount: amount,
-        price: price,
+        amount: amount, // Quantity stays as float
+        price: priceKurus, // Now in kuruş
         date: formatDateTR(dateVal),
         isoDate: dateVal,
         tradeType: type
@@ -2208,11 +2809,11 @@ function handleAssetTrade(type) {
     state.assets.push(trade);
 
     // --- EKLENEN KISIM: Cüzdan Bakiyesi Güncelleme ---
-    const totalValue = amount * price; // Toplam işlem tutarı
+    const totalValueKurus = Math.round(amount * priceKurus); // Total in kuruş
     state.balanceLogs.push({
         id: Date.now() + 1,
         title: `Yatırım ${type === 'buy' ? 'Alışı' : 'Satışı'}: ${assetType.toUpperCase()} (${amount}x)`,
-        amount: type === 'buy' ? -totalValue : totalValue, // Alışta para çıkar, satışta para girer
+        amount: type === 'buy' ? -totalValueKurus : totalValueKurus, // Alışta para çıkar, satışta para girer
         date: formatDateTR(dateVal), // Veya isoDate
         createdAt: new Date().toISOString()
     });
@@ -2222,7 +2823,7 @@ function handleAssetTrade(type) {
 
     document.getElementById('asset-amount').value = '';
 
-    showToast('İşlem Başarılı', `${type === 'buy' ? 'Alış' : 'Satış'} kaydedildi. Cüzdan: ${formatMoney(Math.abs(totalValue))} TL ${type === 'buy' ? 'Düştü' : 'Eklendi'}.`);
+    showToast('İşlem Başarılı', `${type === 'buy' ? 'Alış' : 'Satış'} kaydedildi. Cüzdan: ${formatMoney(Math.abs(totalValueKurus))} TL ${type === 'buy' ? 'Düştü' : 'Eklendi'}.`);
     renderSavingsPage();
 }
 
@@ -2230,7 +2831,7 @@ function handleAssetTrade(type) {
 
 window.addRecurringIncome = function () {
     const name = document.getElementById('income-name').value.trim();
-    const amount = parseFloat(document.getElementById('income-amount').value);
+    const amount = toKurus(parseFloat(document.getElementById('income-amount').value)); // Store in kuruş
     const day = parseInt(document.getElementById('income-day').value);
 
     if (!name || !amount || amount <= 0 || !day || day < 1 || day > 31) {
@@ -2241,7 +2842,7 @@ window.addRecurringIncome = function () {
     state.recurringIncome.push({
         id: Date.now(),
         name: name,
-        amount: amount,
+        amount: amount, // Now in kuruş
         day: day,
         active: true,
         lastProcessedMonth: null
@@ -2385,7 +2986,7 @@ window.selectRecIcon = function (icon) {
 
 function addRecurringPlan() {
     const name = document.getElementById('rec-name').value.trim();
-    const amount = roundToTwo(parseFloat(document.getElementById('rec-amount').value));
+    const amount = toKurus(parseFloat(document.getElementById('rec-amount').value)); // Store in kuruş
     const day = parseInt(document.getElementById('rec-day').value);
     const method = document.getElementById('rec-method-select').value;
     const autoPay = document.getElementById('rec-autopay').checked;
@@ -2871,9 +3472,11 @@ function renderSavingsPage() {
     Object.keys(portfolio).forEach(key => {
         const item = portfolio[key];
         if (item.qty > 0.0001) {
-            const currentPrice = state.marketData[key] || 0;
-            const currentValue = item.qty * currentPrice;
-            const profit = currentValue - item.totalCost;
+            // API returns prices in TL, convert to kuruş for calculation
+            const rawMarketPrice = state.marketData[key] || 0;
+            const currentPriceKurus = toKurus(rawMarketPrice); // TL → Kuruş
+            const currentValue = item.qty * currentPriceKurus; // Now in kuruş
+            const profit = currentValue - item.totalCost; // Both in kuruş
             const profitRate = item.totalCost > 0 ? (profit / item.totalCost) * 100 : 0;
 
             totalPortfolioValue += currentValue;
@@ -2894,7 +3497,7 @@ function renderSavingsPage() {
                         </div>
                         <div class="asset-info">
                             <h4>${getAssetLabel(key)}</h4>
-                            <p>${formatMoney(item.qty)} ${getAssetUnit(key)} x ${formatMoney(item.avgCost)} TL</p>
+                            <p>${Number(item.qty).toLocaleString('tr-TR', { maximumFractionDigits: 4 })} ${getAssetUnit(key)} x ${formatMoney(item.avgCost)} TL</p>
                         </div>
                     </div>
                     <div style="display:flex; align-items:center; gap:10px;">
@@ -2949,8 +3552,8 @@ function openAssetTransactionDetails(id) {
 }
 
 function saveAssetEdit(id, originalItem) {
-    const amount = roundToTwo(parseFloat(document.getElementById('edit-asset-amount').value));
-    const price = roundToTwo(parseFloat(document.getElementById('edit-asset-price').value));
+    const amount = roundToTwo(parseFloat(document.getElementById('edit-asset-amount').value)); // Asset qty stays float
+    const price = toKurus(parseFloat(document.getElementById('edit-asset-price').value)); // Price in kuruş
     const dateVal = document.getElementById('edit-asset-date').value;
     const tradeType = document.getElementById('edit-asset-tradeType').value;
 
@@ -3529,15 +4132,15 @@ function addBalanceLog() {
         return;
     }
 
-    let amount = Math.abs(Number(amountVal));
+    let amountKurus = toKurus(Math.abs(Number(amountVal))); // Convert to kuruş
     if (window.currentWalletType === 'expense') {
-        amount = -amount;
+        amountKurus = -amountKurus;
     }
 
     state.balanceLogs.push({
         id: Date.now(),
         title,
-        amount,
+        amount: amountKurus, // Now in kuruş
         date,
         createdAt: new Date().toISOString()
     });
@@ -3639,7 +4242,7 @@ window.showAddRecurringIncomeForm = function () {
 // Save recurring income from modal
 window.saveRecurringIncomeFromModal = function () {
     const name = document.getElementById('w-inc-name')?.value.trim();
-    const amount = parseFloat(document.getElementById('w-inc-amount')?.value);
+    const amount = toKurus(parseFloat(document.getElementById('w-inc-amount')?.value)); // Store in kuruş
     const day = parseInt(document.getElementById('w-inc-day')?.value);
 
     if (!name || !amount || amount <= 0 || !day || day < 1 || day > 31) {
@@ -3650,7 +4253,7 @@ window.saveRecurringIncomeFromModal = function () {
     state.recurringIncome.push({
         id: Date.now(),
         name: name,
-        amount: amount,
+        amount: amount, // Now in kuruş
         day: day,
         active: true,
         lastProcessedMonth: null

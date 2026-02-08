@@ -1,0 +1,27 @@
+{
+    "expenses": [],
+    "cards": [],
+    "assets": [],
+    "methods": [
+        "Nakit",
+        "Havale / EFT"
+    ],
+    "categories": [
+        "Market",
+        "Yemek",
+        "Ulaşım",
+        "Teknoloji",
+        "Online Alışveriş",
+        "Fatura",
+        "Giyim",
+        "Sağlık",
+        "Eğlence",
+        "Diğer"
+    ],
+    "merchants": [],
+    "recurringPlans": [],
+    "recurringIncome": [],
+    "balanceLogs": [],
+    "isDark": true,
+    "isPrivacyMode": false
+}

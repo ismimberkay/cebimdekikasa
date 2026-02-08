@@ -213,6 +213,14 @@
 </head>
 
 <body data-page="feedback">
+    <!-- Resolution Warning Banner (Soft Warning) -->
+    <div id="resolution-blocker">
+        <i class="fa-solid fa-triangle-exclamation res-icon"></i>
+        <span class="res-message"><strong>⚠️ DİKKAT:</strong> Ekran çözünürlüğünüz yetersiz! Uygulama
+            <strong>1366×768</strong> altında <em>bozuk görünebilir</em> ve <em>düzgün çalışmayabilir</em>. Tarayıcı
+            yakınlaştırmasını azaltın veya daha büyük ekran kullanın.</span>
+    </div>
+
     <div class="web-app-container">
         <aside class="sidebar">
             <!-- Sidebar content rendered by main.js: renderSidebar() -->
@@ -300,6 +308,7 @@
             </div>
         </main>
     </div>
+
     <script src="main.js?v=21"></script>
     <script>
         function sendFeedback() {
