@@ -1721,7 +1721,7 @@ function renderChart() {
     filteredData.forEach(x => { catTotals[x.category] = (catTotals[x.category] || 0) + x.amount; });
 
     const labels = Object.keys(catTotals);
-    const data = Object.values(catTotals);
+    const data = Object.values(catTotals).map(val => val / 100);
     if (labels.length === 0) return;
     if (state.chart) state.chart.destroy();
     state.chart = new Chart(ctx, {
