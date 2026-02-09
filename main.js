@@ -1,12 +1,8 @@
-/* ========================================
-   AUTO-SYNC SYSTEM (File System Access API + IndexedDB)
-   Zero-click cloud sync via Google Drive
-======================================== */
+
 
 let fileHandle;
-let lastSyncDate = null; // Dosyadaki son kayıt tarihi
+let lastSyncDate = null;
 
-// IndexedDB Helper (Dosya iznini tarayıcıda saklamak için)
 const DB_NAME = 'CebimdekiKasaDB';
 const STORE_NAME = 'FileHandleStore';
 
@@ -54,9 +50,7 @@ async function verifyPermission(handle, withWrite = false) {
     return false;
 }
 
-// --- OTOMATİK YÜKLEME VE KAYDETME ---
 
-// --- GÜNCELLENMİŞ initAutoSync (SecurityError Düzeltildi) ---
 
 async function initAutoSync() {
     const statusEl = document.getElementById('sync-status');
@@ -66,7 +60,6 @@ async function initAutoSync() {
         fileHandle = await getStoredHandle();
 
         if (fileHandle) {
-            // 1. Dosya sistemi izni varsa (Otomatik Mod)
             const options = { mode: 'readwrite' };
             const permission = await fileHandle.queryPermission(options);
 
@@ -99,14 +92,11 @@ async function initAutoSync() {
                 };
             }
         } else {
-            // 2. Dosya sistemi YOKSA (Manuel Mod / Yedek Yükle Modu)
             // LocalStorage'dan son tarihi çek
             const lastSync = localStorage.getItem('exp_last_sync');
             if (lastSync) {
                 lastSyncDate = new Date(lastSync);
             }
-
-            // Renk ve durum hesaplamasını 'updateSyncStatus'a bırak
             updateSyncStatus();
         }
     } catch (err) {
@@ -159,7 +149,7 @@ async function loadFromFile() {
         if (data.isDark !== undefined) state.isDark = data.isDark;
         if (data.isPrivacyMode !== undefined) state.isPrivacyMode = data.isPrivacyMode;
 
-        // Son kayıt tarihini sakla (lastSync yoksa dosya adından veya tarihi kullan)
+
         if (data.lastSync) {
             lastSyncDate = new Date(data.lastSync);
             console.log('lastSync JSON\'dan alındı:', data.lastSync);
@@ -183,7 +173,7 @@ async function loadFromFile() {
         }
         console.log('Son yedek tarihi:', lastSyncDate.toLocaleDateString('tr-TR'));
 
-        // LocalStorage'ı da güncelle
+
         localStorage.setItem('exp_logs', JSON.stringify(state.expenses));
         localStorage.setItem('exp_cards', JSON.stringify(state.cards));
         localStorage.setItem('exp_assets', JSON.stringify(state.assets));
@@ -194,13 +184,11 @@ async function loadFromFile() {
         localStorage.setItem('exp_recurring_income', JSON.stringify(state.recurringIncome));
         localStorage.setItem('exp_balance_logs', JSON.stringify(state.balanceLogs));
 
-        // Tema uygula
         if (data.isDark !== undefined) {
             localStorage.setItem('dark_mode', data.isDark);
             applyTheme();
         }
 
-        // Ekranı yenile (Sadece aktif sayfada)
         const page = document.body.dataset.page || 'dashboard';
 
         if (page === 'dashboard' && typeof updateDashboard === 'function') updateDashboard();
@@ -256,7 +244,6 @@ async function saveToFile() {
     }
 }
 
-// Senkronizasyon dosyasını değiştir (Ayarlar'dan seçilebilir)
 window.changeSyncFile = async function () {
     try {
         [fileHandle] = await window.showOpenFilePicker({
@@ -286,7 +273,6 @@ function updateSyncStatus(justSaved = false) {
     statusEl.style.color = '';
     statusEl.classList.remove('error', 'synced', 'needs-attention');
 
-    // Eğer yeni kaydettiyse tarihi güncelle
     if (justSaved) {
         lastSyncDate = new Date();
         // Manuel moddaysa localStorage'ı da güncelle ki reload edince tarih gitmesin
@@ -312,7 +298,6 @@ function updateSyncStatus(justSaved = false) {
         statusEl.onclick = null;
     }
 
-    // TARİH HESAPLAMA VE RENKLENDİRME
     if (!lastSyncDate) {
         // Tarih hiç yoksa -> "Yedek Yükle" butonu gibi davran
         statusEl.innerHTML = '<i class="fa-solid fa-upload"></i> Yedek Yükle';
@@ -370,7 +355,6 @@ function updateSyncStatus(justSaved = false) {
     statusEl.style.boxShadow = boxShadow;
 }
 
-// Tarihli dosya adı formatı: "08.02.2026 tarihli Cebimdeki Kasa.json"
 function getBackupFileName() {
     const now = new Date();
     const day = String(now.getDate()).padStart(2, '0');
@@ -379,7 +363,6 @@ function getBackupFileName() {
     return `${day}.${month}.${year} tarihli Cebimdeki Kasa.json`;
 }
 
-// saveData - Tüm kayıt işlemlerini merkezi yönetir
 function saveData() {
     localStorage.setItem('exp_logs', JSON.stringify(state.expenses));
     localStorage.setItem('exp_cards', JSON.stringify(state.cards));
@@ -395,7 +378,7 @@ function saveData() {
     saveToFile();
 }
 
-/* ======================================== */
+
 
 let state = {
     expenses: JSON.parse(localStorage.getItem('exp_logs')) || [],
@@ -424,15 +407,13 @@ let state = {
  * Called once on first load after update, then dataVersion is set to 2
  */
 function migrateToKurus() {
-    if (state.dataVersion >= 2) return; // Already migrated
+    if (state.dataVersion >= 2) return;
 
     console.log('[Migration] Starting TL → Kuruş conversion...');
 
-    // Helper: Check if value looks like TL (has decimals or is small)
     const needsMigration = (val) => {
         if (val === null || val === undefined) return false;
         const num = Number(val);
-        // If it has decimals OR is reasonably small (< 100000), it's probably TL
         return !Number.isInteger(num) || num < 100000;
     };
 
@@ -491,13 +472,11 @@ function migrateToKurus() {
     console.log('[Migration] Complete! All values now in kuruş (integer cents)');
 }
 
-// Robust Name Matching Helper
 function namesMatch(n1, n2) {
     if (!n1 || !n2) return false;
     return n1.toString().trim().toLowerCase() === n2.toString().trim().toLowerCase();
 }
 
-// HATA 2 FIX: Get local date in YYYY-MM-DD format (avoids UTC timezone issues)
 function getLocalDateISO(date = new Date()) {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -505,9 +484,65 @@ function getLocalDateISO(date = new Date()) {
     return `${year}-${month}-${day}`;
 }
 
-// Generate unique ID to prevent collision (HATA 4 FIX)
 function generateUniqueId() {
     return Date.now() + Math.floor(Math.random() * 1000000);
+}
+
+
+
+function formatCurrencyInput(input) {
+    let value = input.value;
+
+    // Sadece rakam ve virgül/nokta bırak
+    value = value.replace(/[^\d,\.]/g, '');
+
+    // Virgülü nokta ile değiştir (hesaplama için)
+    value = value.replace(',', '.');
+
+    // Birden fazla noktayı temizle (sadece son noktayı tut)
+    const parts = value.split('.');
+    if (parts.length > 2) {
+        value = parts.slice(0, -1).join('') + '.' + parts[parts.length - 1];
+    }
+
+    // Sayısal değeri al
+    let numValue = parseFloat(value);
+    if (isNaN(numValue)) {
+        input.value = '';
+        return;
+    }
+
+    // Türk para formatına çevir (1.500,00)
+    input.value = new Intl.NumberFormat('tr-TR', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2
+    }).format(numValue);
+}
+
+function parseCurrencyInput(formattedValue) {
+    if (!formattedValue) return 0;
+    // Türk formatından sayıya çevir: nokta (binlik) kaldır, virgül (ondalık) noktaya çevir
+    const cleaned = formattedValue.replace(/\./g, '').replace(',', '.');
+    return parseFloat(cleaned) || 0;
+}
+
+function setupCurrencyInputs(...inputIds) {
+    inputIds.forEach(id => {
+        const input = document.getElementById(id);
+        if (input) {
+            // Input'u text tipine çevir (number tip binlik ayraç göstermiyor)
+            input.type = 'text';
+            input.inputMode = 'decimal';
+
+            input.addEventListener('blur', () => formatCurrencyInput(input));
+            input.addEventListener('keydown', (e) => {
+                // Enter tuşunda formatla
+                if (e.key === 'Enter') {
+                    formatCurrencyInput(input);
+                }
+            });
+        }
+    });
 }
 
 const NAV_ITEMS = [
@@ -563,7 +598,6 @@ function renderSidebar() {
     `;
 }
 
-// HATA 6 FIX: Event delegation for sidebar elements (prevents event loss on re-render)
 document.addEventListener('click', (e) => {
     // Theme button click
     if (e.target.closest('#theme-btn')) {
@@ -592,7 +626,9 @@ function init() {
     setupModalHTML();
     setupGlobalHotkeys();
     checkRecurringTransactions();
-    checkRecurringIncome(); // GLOBAL TRIGGER
+    setupGlobalHotkeys();
+    checkRecurringTransactions();
+    checkRecurringIncome();
 
     if (window.location.hash === '#settings') {
         setTimeout(() => toggleSettingsView(true), 100);
@@ -602,20 +638,21 @@ function init() {
         state.activeCardId = state.cards[0].id;
     }
 
-    // Event listeners now handled by event delegation (HATA 6 FIX)
 
-    // Robust Routing using data-page
+
     const page = document.body.dataset.page || 'dashboard';
 
     if (page === 'dashboard') {
-        renderDropdowns('exp'); // Modernize inputs
+        renderDropdowns('exp');
         updateDashboard();
         setupAddButton();
         if (document.getElementById('exp-date'))
             document.getElementById('exp-date').valueAsDate = new Date();
 
         setupAutocomplete('exp-merchant', 'exp-merchant-suggestions');
-        fetchMarketData(); // Ana sayfa açılınca verileri çek
+        setupAutocomplete('exp-merchant', 'exp-merchant-suggestions');
+        setupCurrencyInputs('exp-amount');
+        fetchMarketData();
     }
 
     else if (page === 'credit') {
@@ -643,6 +680,7 @@ function init() {
         if (btnNext) btnNext.addEventListener('click', () => { state.periodOffset++; updateStatementView(); });
 
         setupAutocomplete('cr-merchant', 'cr-merchant-suggestions');
+        setupCurrencyInputs('cr-amount'); // Currency masking
     }
 
     else if (page === 'expenses') {
@@ -794,13 +832,11 @@ function init() {
                         });
                     }
 
-                    // --- YEAR VALIDATION ---
                     const yearInput = instance.currentYearElement;
                     if (yearInput) {
                         const minYear = 2010;
                         const maxYear = new Date().getFullYear();
 
-                        // NATIVE CONSTRAINT (Fixes arrow keys)
                         yearInput.min = minYear;
                         yearInput.max = maxYear;
 
@@ -923,7 +959,7 @@ function setupAddButton() {
 function addExpense() {
     const merchant = document.getElementById('exp-merchant').value.trim();
     const description = document.getElementById('exp-desc') ? document.getElementById('exp-desc').value.trim() : '';
-    const amountKurus = toKurus(parseFloat(document.getElementById('exp-amount').value)); // Store in kuruş
+    const amountKurus = toKurus(parseCurrencyInput(document.getElementById('exp-amount').value)); // Store in kuruş (formatted input)
     const dateVal = document.getElementById('exp-date').value;
     const method = document.getElementById('exp-method-select').value;
     const category = document.getElementById('exp-category-select').value;
@@ -940,7 +976,7 @@ function addExpense() {
         state.expenses.push({
             id: Date.now(),
             merchant, description,
-            amount: amountKurus, // Now in kuruş
+            amount: amountKurus,
             method, category,
             isoDate: dateVal, date: formatDateTR(dateVal),
             isCredit: false,
@@ -948,8 +984,6 @@ function addExpense() {
             recurrenceFrequency: isRecurring ? 'monthly' : null
         });
 
-        // --- NEW: Auto-deduct from Wallet if not credit ---
-        // Since it's not a linked card (checked above), it's a cash/debit expense.
         state.balanceLogs.push({
             id: Date.now() + 1, // Ensure unique ID from expense
             title: merchant, // Use merchant name as description
@@ -977,9 +1011,7 @@ function updateDashboard() {
     renderDropdowns('exp');
     let displayList = [];
     const rawList = state.expenses.slice().sort((a, b) => {
-        // Sort by Date Descending
         if (b.isoDate !== a.isoDate) return b.isoDate.localeCompare(a.isoDate);
-        // Fallback to ID Descending
         return b.id - a.id;
     });
 
@@ -995,11 +1027,9 @@ function updateDashboard() {
     });
 
     // Filter out future dates for "Recent Transactions" (History)
-    // Use Local Time for "Today" comparison, not UTC
     const now = new Date();
     const localTodayISO = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
 
-    // We only show items where date <= today (Local)
     const historyList = displayList.filter(item => item.isoDate <= localTodayISO);
 
     renderList(historyList.slice(0, 10), 'transaction-history');
@@ -1008,16 +1038,15 @@ function updateDashboard() {
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
 
-    // DÜZELTME: isPayment (Borç Ödemesi) olanları toplama dahil etme (!x.isPayment)
     const currentTotal = state.expenses
         .filter(x => { const d = new Date(x.isoDate); return d.getMonth() === currentMonth && d.getFullYear() === currentYear; })
-        .filter(x => !x.isPayment) // <-- YENİ EKLENDİ
+        .filter(x => !x.isPayment)
         .reduce((sum, x) => sum + Number(x.amount), 0);
 
     const prevDate = new Date(currentYear, currentMonth - 1, 1);
     const prevTotal = state.expenses
         .filter(x => { const d = new Date(x.isoDate); return d.getMonth() === prevDate.getMonth() && d.getFullYear() === prevDate.getFullYear(); })
-        .filter(x => !x.isPayment) // <-- YENİ EKLENDİ
+        .filter(x => !x.isPayment)
         .reduce((sum, x) => sum + Number(x.amount), 0);
 
     const grandTotalEl = document.getElementById('grand-total');
@@ -1041,7 +1070,6 @@ function updateDashboard() {
         }
     }
 
-    // Render Wallet Widget
     renderWalletWidget();
 }
 
@@ -1085,7 +1113,6 @@ function updateStatementView() {
     const cardDigits = document.getElementById('card-last-digits');
     const logoDiv = document.querySelector('.card-logo');
 
-    // FIX: Helper to handle month overflow (e.g. Feb 30 -> Mar 2 issues)
     const getClampedDate = (year, month, day) => {
         const daysInMonth = new Date(year, month + 1, 0).getDate();
         const effectiveDay = Math.min(day, daysInMonth);
@@ -1166,16 +1193,11 @@ function updateStatementView() {
             return d >= start && d <= end;
         });
 
-        // FIXED: Show Period Debt (Sum of period expenses - Sum of period payments)
-        // This is strictly for the CURRENT VIEWED PERIOD
         const periodSpends = periodOps.filter(x => !x.isPayment).reduce((sum, x) => sum + Number(x.amount), 0);
         const periodPayments = periodOps.filter(x => x.isPayment).reduce((sum, x) => sum + Number(x.amount), 0);
 
-        // "Dönem Borcu" = Spends in this period - Payments in this period
-        // If it's negative (more paid than spent), it shows 0 (or could show credit)
         const periodDebtReal = Math.max(0, periodSpends - periodPayments);
 
-        // Remaining Limit is still based on GLOBAL debt
         const totalDebtReal = Math.max(0, allSpends - allPayments);
         const remaining = totalLimit - totalDebtReal;
 
@@ -1198,6 +1220,14 @@ function updateStatementView() {
 
     if (cardDigits) cardDigits.textContent = activeCard.last4 ? activeCard.last4 : '----';
     setCardLogo(activeCard.brand || 'visa');
+
+    // Update card back face with CVC and expiry
+    const cvcDisplay = document.getElementById('card-cvc-display');
+    const expiryDisplay = document.getElementById('card-expiry-display');
+    const bankDisplay = document.getElementById('card-bank-name');
+    if (cvcDisplay) cvcDisplay.textContent = activeCard.cvc ? activeCard.cvc : '***';
+    if (expiryDisplay) expiryDisplay.textContent = activeCard.expiry ? activeCard.expiry : '**/**';
+    if (bankDisplay) bankDisplay.textContent = activeCard.name || '-';
 
     const now = new Date();
     const today = getClampedDate(now.getFullYear(), now.getMonth() + state.periodOffset, now.getDate());
@@ -1264,7 +1294,7 @@ function addCreditExpense() {
     if (!selectedCardId) { showToast('Hata', 'Lütfen harcamanın yapılacağı kartı seçin.', 'error'); return; }
 
     const activeCard = state.cards.find(c => c.id === selectedCardId);
-    const amountVal = toKurus(parseFloat(document.getElementById('cr-amount').value)); // Store in kuruş
+    const amountVal = toKurus(parseCurrencyInput(document.getElementById('cr-amount').value));
     const merchant = document.getElementById('cr-merchant').value.trim();
 
     const allCardOps = state.expenses.filter(x => namesMatch(x.method, activeCard.name));
@@ -1285,14 +1315,12 @@ function addCreditExpense() {
     saveMerchant(merchant);
 
     const baseDate = new Date(dateInput);
-    // Integer-safe installment splitting (avoid floating point issues)
     const totalAmountKurus = amountVal;
     const baseInstallment = Math.floor(totalAmountKurus / installments);
     const remainder = totalAmountKurus % installments;
 
     for (let i = 0; i < installments; i++) {
         const nextDate = new Date(baseDate);
-        // Remainder goes to first installment
         const currentInstallmentAmount = baseInstallment + (i === 0 ? remainder : 0);
 
         // FIX: Handle 31st day overflow (e.g. Jan 31 -> Feb 28/29)
@@ -1300,16 +1328,15 @@ function addCreditExpense() {
         nextDate.setMonth(baseDate.getMonth() + i);
 
         if (nextDate.getMonth() !== expectedMonth && nextDate.getMonth() !== (expectedMonth + 12) % 12) {
-            // If month jumped (overflow), set to last day of previous month
             nextDate.setDate(0);
         }
 
-        const iso = getLocalDateISO(nextDate); // HATA 2 FIX: Use local date
+        const iso = getLocalDateISO(nextDate);
 
         state.expenses.push({
-            id: generateUniqueId(), // HATA 4 FIX: Use unique ID generator
+            id: generateUniqueId(),
             merchant: installments > 1 ? `${merchant} (${i + 1}/${installments})` : merchant,
-            amount: currentInstallmentAmount, // Integer guaranteed
+            amount: currentInstallmentAmount,
             method: activeCard.name,
             category: category,
             isoDate: iso,
@@ -1340,6 +1367,8 @@ function openCardManagerModal() {
 
     const brand = card && card.brand ? card.brand : 'visa';
     const last4 = card && card.last4 ? card.last4 : '';
+    const expiry = card && card.expiry ? card.expiry : '';
+    const cvc = card && card.cvc ? card.cvc : '';
 
     const html = `
         <div class="modal-input-group"><label>Kart Adı</label><input type="text" id="new-card-name" value="${card ? card.name : ''}" placeholder="Örn: Bonus, Axess"></div>
@@ -1359,8 +1388,26 @@ function openCardManagerModal() {
             </div>
         </div>
 
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:5px;">
+            <div class="modal-input-group" style="flex:1;">
+                <label>Son Kullanma <small style="color:var(--text-light)">(Opsiyonel)</small></label>
+                <input type="text" id="new-card-expiry" value="${expiry}" maxlength="5" placeholder="AA/YY" 
+                    oninput="let v=this.value.replace(/[^0-9]/g,''); if(v.length>=2){v=v.slice(0,2)+'/'+v.slice(2,4);} this.value=v.slice(0,5);"
+                    style="font-family:monospace; letter-spacing:2px;">
+            </div>
+            <div class="modal-input-group" style="flex:1;">
+                <label>CVC <small style="color:var(--text-light)">(Opsiyonel)</small></label>
+                <input type="text" id="new-card-cvc" value="${cvc}" maxlength="3" placeholder="123" 
+                    oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 3);"
+                    style="font-family:monospace; letter-spacing:2px;">
+            </div>
+        </div>
+        <small style="color:var(--text-light); display:block; margin-top:5px;"><i class="fa-solid fa-shield-halved"></i> CVC ve Son Kullanma tarihi sadece görsel amaçlıdır, şifreli saklanır.</small>
+
         <div class="modal-input-group"><label>Hesap Kesim Günü (1-31)</label><input type="number" id="new-card-cutoff" value="${card ? card.cutoff : ''}" min="1" max="31"></div>
-        <div class="modal-input-group"><label>Kart Limiti (TL)</label><input type="number" id="new-card-limit" value="${card ? card.limit : ''}" placeholder="Limit"></div>
+        <div class="modal-input-group"><label>Kart Limiti (TL)</label><input type="number" id="new-card-limit" value="${card ? toTL(card.limit) : ''}" step="0.01" placeholder="Limit"></div>
     `;
 
     const actions = [
@@ -1375,9 +1422,11 @@ function openCardManagerModal() {
 function saveCardProcess(editId = null) {
     const name = document.getElementById('new-card-name').value.trim();
     const cutoff = parseInt(document.getElementById('new-card-cutoff').value);
-    const limit = toKurus(parseFloat(document.getElementById('new-card-limit').value)); // Store in kuruş
+    const limit = toKurus(parseFloat(document.getElementById('new-card-limit').value));
     const brand = document.getElementById('new-card-brand').value;
     const last4 = document.getElementById('new-card-last4').value;
+    const expiry = document.getElementById('new-card-expiry').value.trim();
+    const cvc = document.getElementById('new-card-cvc').value.trim();
 
     if (name && cutoff >= 1 && cutoff <= 31 && limit > 0) {
         if (editId) {
@@ -1386,9 +1435,11 @@ function saveCardProcess(editId = null) {
                 const oldName = state.cards[cardIndex].name;
                 state.cards[cardIndex].name = name;
                 state.cards[cardIndex].cutoff = cutoff;
-                state.cards[cardIndex].limit = limit; // Already in kuruş
+                state.cards[cardIndex].limit = limit;
                 state.cards[cardIndex].brand = brand;
                 state.cards[cardIndex].last4 = last4;
+                state.cards[cardIndex].expiry = expiry;
+                state.cards[cardIndex].cvc = cvc;
 
                 if (name !== oldName) {
                     state.expenses.forEach(ex => { if (ex.method === oldName) ex.method = name; });
@@ -1399,7 +1450,7 @@ function saveCardProcess(editId = null) {
                 showToast('Güncellendi', 'Kart bilgileri güncellendi.');
             }
         } else {
-            const newCard = { id: Date.now(), name, cutoff, limit, brand, last4 };
+            const newCard = { id: Date.now(), name, cutoff, limit, brand, last4, expiry, cvc };
             state.cards.push(newCard);
             if (!state.methods.includes(name)) state.methods.push(name);
             state.activeViewCardId = newCard.id;
@@ -1424,13 +1475,11 @@ function deleteActiveCard() {
                     // Delete the card
                     state.cards = state.cards.filter(c => c.id !== state.activeViewCardId);
 
-                    // HATA 3 FIX: Clean up orphan expenses
                     if (cardName) {
                         const beforeCount = state.expenses.length;
                         state.expenses = state.expenses.filter(e => !namesMatch(e.method, cardName));
                         const deletedExpenses = beforeCount - state.expenses.length;
 
-                        // Also clean up recurring plans tied to this card
                         state.recurringPlans = state.recurringPlans.filter(p => !namesMatch(p.method, cardName));
                     }
 
@@ -1547,6 +1596,17 @@ function populateFilters() {
     }
 
     if (dFilter) {
+        // Generate month options for last 6 months only (cleaner UI)
+        const monthOptions = [];
+        const now = new Date();
+        const monthNames = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+        for (let i = 0; i < 6; i++) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const value = `month-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            const label = `${monthNames[d.getMonth()]} ${d.getFullYear()}`;
+            monthOptions.push(`<option value="${value}">${label}</option>`);
+        }
+
         dFilter.innerHTML = `
             <option value="all">Tüm Zamanlar</option>
             <option value="7days">Son 1 Hafta</option>
@@ -1554,13 +1614,31 @@ function populateFilters() {
             <option value="3months">Son 3 Ay</option>
             <option value="6months">Son 6 Ay</option>
             <option value="1year">Son 1 Yıl</option>
+            <optgroup label="Belirli Ay">
+                ${monthOptions.join('')}
+            </optgroup>
             <option value="custom">Özel Aralık...</option>
         `;
         initCustomSelect('filter-range');
     }
 }
 function openCustomRangeModal() {
-    const html = `<div class="modal-input-group"><label>Başlangıç</label><input type="date" id="custom-start"></div><div class="modal-input-group"><label>Bitiş</label><input type="date" id="custom-end"></div>`;
+    const html = `
+        <div class="modal-input-group">
+            <label>Başlangıç</label>
+            <div class="input-wrapper" style="position:relative;">
+                <input type="date" id="custom-start" style="padding-left:40px !important;">
+                <i class="fa-regular fa-calendar" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text-light); pointer-events:none;"></i>
+            </div>
+        </div>
+        <div class="modal-input-group">
+            <label>Bitiş</label>
+            <div class="input-wrapper" style="position:relative;">
+                <input type="date" id="custom-end" style="padding-left:40px !important;">
+                <i class="fa-regular fa-calendar" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text-light); pointer-events:none;"></i>
+            </div>
+        </div>
+    `;
 
     const isAnalysis = window.location.pathname.includes('analysis.html');
     const refreshFunc = isAnalysis ? () => { renderChart(); renderAnalysisList(); } : renderFullHistory;
@@ -1585,6 +1663,28 @@ function openCustomRangeModal() {
             }
         }
     ]);
+
+    // Initialize flatpickr for modern date picker experience
+    setTimeout(() => {
+        if (window.flatpickr) {
+            flatpickr("#custom-start", {
+                locale: "tr",
+                dateFormat: "Y-m-d",
+                altInput: true,
+                altFormat: "d F Y",
+                disableMobile: true,
+                maxDate: "today"
+            });
+            flatpickr("#custom-end", {
+                locale: "tr",
+                dateFormat: "Y-m-d",
+                altInput: true,
+                altFormat: "d F Y",
+                disableMobile: true,
+                maxDate: "today"
+            });
+        }
+    }, 100);
 }
 
 function renderFullHistory() {
@@ -1615,9 +1715,18 @@ function renderFullHistory() {
 }
 
 function checkDateFilter(itemDateIso, filterVal) {
-    if (filterVal === 'all') return true;
+    if (filterVal === 'all') return true; // Include ALL items including future
     const itemDate = new Date(itemDateIso);
     const today = new Date(); today.setHours(23, 59, 59, 999);
+
+    // Handle specific month filter (format: month-YYYY-MM)
+    if (filterVal.startsWith('month-')) {
+        const [, year, month] = filterVal.split('-');
+        const filterYear = parseInt(year);
+        const filterMonth = parseInt(month) - 1; // 0-indexed
+        return itemDate.getFullYear() === filterYear && itemDate.getMonth() === filterMonth;
+    }
+
     if (filterVal === 'custom') {
         const s = new Date(state.customRange.start); const e = new Date(state.customRange.end); e.setHours(23, 59, 59);
         return itemDate >= s && itemDate <= e;
@@ -1629,7 +1738,8 @@ function checkDateFilter(itemDateIso, filterVal) {
     else if (filterVal === '6months') past.setMonth(today.getMonth() - 6);
     else if (filterVal === '1year') past.setFullYear(today.getFullYear() - 1);
     past.setHours(0, 0, 0, 0);
-    return itemDate >= past && itemDate <= today;
+    // Include future items in range filters too (past to infinity)
+    return itemDate >= past;
 }
 
 function renderList(data, containerId) {
@@ -1647,20 +1757,28 @@ function renderList(data, containerId) {
         return;
     }
 
-    let htmlContent = ''; let lastDate = '';
     const todayStr = formatDateTR(getLocalDateISO());
     const y = new Date(); y.setDate(y.getDate() - 1);
     const yesterdayStr = formatDateTR(getLocalDateISO(y));
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Separate past and future items using ISO string comparison (avoids timezone issues)
+    const pastItems = [];
+    const futureItems = [];
+    const todayISO = getLocalDateISO(); // "YYYY-MM-DD" format
 
     data.forEach(item => {
-        if (item.date !== lastDate) {
-            let label = item.date;
-            if (item.date === todayStr) label = "Bugün";
-            else if (item.date === yesterdayStr) label = "Dün";
-            htmlContent += `<div style="font-size:0.75rem; font-weight:800; color:var(--text-light); margin: 15px 0 8px 5px; text-transform:uppercase; letter-spacing:1px; opacity:0.8;">${label}</div>`;
-            lastDate = item.date;
+        // String comparison works for ISO dates (YYYY-MM-DD sorts correctly)
+        if (item.isoDate > todayISO) {
+            futureItems.push(item);
+        } else {
+            pastItems.push(item);
         }
+    });
 
+    // Render item helper function
+    const renderItem = (item) => {
         const isPayment = item.isPayment === true;
         const amountClass = isPayment ? 'var(--success)' : 'var(--text-main)';
         const amountPrefix = isPayment ? '+' : '-';
@@ -1681,7 +1799,7 @@ function renderList(data, containerId) {
             else if (cat.includes('eğlence')) iconClass = 'fa-film';
             else if (cat.includes('elektronik') || cat.includes('teknoloji')) iconClass = 'fa-plug';
             else if (cat.includes('eğitim')) iconClass = 'fa-graduation-cap';
-            else if (cat.includes('kozmetik')) iconClass = 'fa-eye'; // or fa-spray-can if available, but eye is safe
+            else if (cat.includes('kozmetik')) iconClass = 'fa-eye';
             else if (cat.includes('ev')) iconClass = 'fa-house-chimney';
             else if (cat.includes('tatil')) iconClass = 'fa-plane';
             else if (cat.includes('spor')) iconClass = 'fa-dumbbell';
@@ -1690,7 +1808,7 @@ function renderList(data, containerId) {
 
         const iconStyle = isPayment ? 'color:var(--success); background:rgba(46, 196, 182, 0.15);' : '';
 
-        htmlContent += `
+        return `
         <div class="t-row" onclick="openDetails(${item.id})">
             <div class="t-icon" style="${iconStyle}">
                 <i class="fa-solid ${iconClass}"></i>
@@ -1701,7 +1819,66 @@ function renderList(data, containerId) {
             </div>
             <div class="t-amount" style="color:${amountClass}">${amountPrefix}${formatMoney(item.amount)}₺</div>
         </div>`;
-    });
+    };
+
+    // Render date header helper
+    const renderDateHeader = (dateStr, isoDate, isFuture = false) => {
+        let label = dateStr;
+        if (dateStr === todayStr) label = "Bugün";
+        else if (dateStr === yesterdayStr) label = "Dün";
+        return `<div style="font-size:0.75rem; font-weight:800; color:var(--text-light); margin: 15px 0 8px 5px; text-transform:uppercase; letter-spacing:1px; opacity:0.8;">${label}</div>`;
+    };
+
+    let htmlContent = '';
+
+    // Render future installments section (collapsible)
+    if (futureItems.length > 0) {
+        const futureTotal = futureItems.reduce((sum, item) => sum + item.amount, 0);
+        htmlContent += `
+        <div class="future-section">
+            <div class="future-header" onclick="this.parentElement.classList.toggle('collapsed')">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <i class="fa-solid fa-clock" style="color:var(--primary);"></i>
+                    <span style="font-weight:600; color:var(--primary);">Gelecek Taksitler</span>
+                    <span style="background:var(--primary); color:white; padding:2px 8px; border-radius:10px; font-size:0.75rem;">${futureItems.length}</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <span style="color:var(--text-light); font-size:0.85rem;">${formatMoney(futureTotal)}₺</span>
+                    <i class="fa-solid fa-chevron-down future-arrow"></i>
+                </div>
+            </div>
+            <div class="future-content">`;
+
+        let lastFutureDate = '';
+        futureItems.forEach(item => {
+            if (item.date !== lastFutureDate) {
+                htmlContent += renderDateHeader(item.date, item.isoDate, true);
+                lastFutureDate = item.date;
+            }
+            htmlContent += renderItem(item);
+        });
+
+        htmlContent += `</div></div>`;
+    }
+
+    // Render past items section
+    if (pastItems.length > 0) {
+        if (futureItems.length > 0) {
+            htmlContent += `<div style="font-size:0.85rem; font-weight:700; color:var(--text-main); margin: 20px 0 10px 5px; padding-top:15px; border-top:1px solid var(--border);">
+                <i class="fa-solid fa-history" style="margin-right:8px; opacity:0.7;"></i>Geçmiş Harcamalar
+            </div>`;
+        }
+
+        let lastPastDate = '';
+        pastItems.forEach(item => {
+            if (item.date !== lastPastDate) {
+                htmlContent += renderDateHeader(item.date, item.isoDate);
+                lastPastDate = item.date;
+            }
+            htmlContent += renderItem(item);
+        });
+    }
+
     container.innerHTML = htmlContent;
 }
 
@@ -1722,8 +1899,56 @@ function renderChart() {
 
     const labels = Object.keys(catTotals);
     const data = Object.values(catTotals).map(val => val / 100);
+    const totalAmount = data.reduce((sum, val) => sum + val, 0);
+
     if (labels.length === 0) return;
     if (state.chart) state.chart.destroy();
+
+    const centerTextPlugin = {
+        id: 'centerText',
+        afterDraw: function (chart) {
+            const { ctx, chartArea } = chart;
+            if (!chartArea) return;
+
+            const centerX = (chartArea.left + chartArea.right) / 2;
+            const centerY = (chartArea.top + chartArea.bottom) / 2;
+
+            let displayText = '';
+            let displayLabel = 'TOPLAM';
+
+            const activeElements = chart.getActiveElements();
+            if (activeElements.length > 0) {
+                const index = activeElements[0].index;
+                displayLabel = chart.data.labels[index];
+                displayText = new Intl.NumberFormat('tr-TR', {
+                    style: 'currency',
+                    currency: 'TRY',
+                    minimumFractionDigits: 2
+                }).format(chart.data.datasets[0].data[index]);
+            } else {
+                displayText = new Intl.NumberFormat('tr-TR', {
+                    style: 'currency',
+                    currency: 'TRY',
+                    minimumFractionDigits: 2
+                }).format(totalAmount);
+            }
+
+            ctx.save();
+
+            ctx.font = `600 14px 'Outfit', sans-serif`;
+            ctx.fillStyle = state.isDark ? '#8d99ae' : '#8d99ae';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(displayLabel, centerX, centerY - 15);
+
+            ctx.font = `800 24px 'Outfit', sans-serif`;
+            ctx.fillStyle = state.isDark ? '#edf2f4' : '#2b2d42';
+            ctx.fillText(displayText, centerX, centerY + 12);
+
+            ctx.restore();
+        }
+    };
+
     state.chart = new Chart(ctx, {
         type: 'doughnut',
         data: {
@@ -1735,9 +1960,13 @@ function renderChart() {
                 hoverOffset: 10
             }]
         },
+        plugins: [centerTextPlugin],
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            onHover: (e, elements) => {
+                state.chart.update('none');
+            },
             onClick: (e, elements) => {
                 const listHeader = document.querySelector('#analysis-list').previousElementSibling.querySelector('h3');
 
@@ -1906,11 +2135,45 @@ function showModal(t, c, acts = [], extraClass = '') {
 function closeModal() { document.getElementById('app-modal').classList.remove('active'); }
 
 window.openDetails = function (id) {
+    // Block access if privacy mode is enabled
+    if (state.isPrivacyMode) {
+        showToast('Gizlilik Modu', 'Gizlilik modunda düzenleme yapılamaz.', 'error');
+        return;
+    }
+
     const item = state.expenses.find(x => x.id === id);
     if (!item) return;
+
+    // Build method options: Nakit, Havale/EFT, and all Credit Cards
+    const allMethods = ['Nakit', 'Havale / EFT', ...state.cards.map(c => c.name)];
+    const methodOptions = allMethods.map(m =>
+        `<option value="${m}" ${m === item.method ? 'selected' : ''}>${m}</option>`
+    ).join('');
+
     const html = `
-        <div class="modal-input-group"><label>Yer</label><input id="edit-merch" value="${item.merchant}"></div>
-        <div class="modal-input-group"><label>Tutar</label><input type="number" id="edit-amount" value="${item.amount}"></div>
+        <div class="modal-input-group">
+            <label>Yer</label>
+            <div class="input-wrapper" style="position:relative;">
+                <input id="edit-merch" value="${item.merchant}" style="padding-left:40px !important;">
+                <i class="fa-solid fa-store" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text-light); pointer-events:none;"></i>
+            </div>
+        </div>
+        <div class="modal-input-group">
+            <label>Tutar</label>
+            <div class="input-wrapper" style="position:relative;">
+                <input type="number" id="edit-amount" value="${toTL(item.amount)}" step="0.01" style="padding-left:40px !important;">
+                <i class="fa-solid fa-turkish-lira-sign" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text-light); pointer-events:none;"></i>
+            </div>
+        </div>
+        <div class="modal-input-group">
+            <label>Ödeme Yöntemi</label>
+            <div class="input-wrapper" style="position:relative;">
+                <select id="edit-method" style="padding-left:40px !important;">
+                    ${methodOptions}
+                </select>
+                <i class="fa-solid fa-wallet" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text-light); pointer-events:none;"></i>
+            </div>
+        </div>
         <div class="modal-input-group"><label>Tarih</label>
             <div class="input-wrapper" style="position:relative;">
                 <input type="date" id="edit-date" value="${item.isoDate}" style="padding-left:40px !important;">
@@ -1934,16 +2197,38 @@ window.openDetails = function (id) {
         {
             text: 'Güncelle', class: 'btn-confirm', onClick: () => {
                 const m = document.getElementById('edit-merch').value;
-                const a = parseFloat(document.getElementById('edit-amount').value);
+                const aTL = parseFloat(document.getElementById('edit-amount').value);
+                const a = toKurus(aTL); // Convert TL input to kuruş for storage
                 const d = document.getElementById('edit-date').value;
+                const newMethod = document.getElementById('edit-method').value;
 
                 if (m && a) {
-                    // --- EKLENEN KISIM BAŞLANGIÇ (Farkı Hesapla) ---
-                    if (!item.isCredit) { // Sadece nakit/banka harcamaları için
-                        const oldAmount = item.amount;
-                        const diff = a - oldAmount; // Yeni Tutar - Eski Tutar
+                    const oldMethod = item.method;
+                    const oldAmount = item.amount;
+                    const oldIsCredit = item.isCredit;
+                    const newIsCredit = state.cards.some(c => c.name === newMethod);
 
-                        // Eğer tutar arttıysa (örn: 100 -> 150), fark 50'dir. Cüzdandan 50 daha düşmeliyiz (-50).
+                    if (oldIsCredit !== newIsCredit) {
+                        if (oldIsCredit && !newIsCredit) {
+                            state.balanceLogs.push({
+                                id: Date.now(),
+                                title: `Düzeltme (Kredi -> Nakit): ${m}`,
+                                amount: -a, // Deduct new amount from wallet
+                                date: getLocalDateISO(),
+                                createdAt: new Date().toISOString()
+                            });
+                        } else if (!oldIsCredit && newIsCredit) {
+                            state.balanceLogs.push({
+                                id: Date.now(),
+                                title: `Düzeltme (Nakit -> Kredi): ${m}`,
+                                amount: oldAmount, // Refund old amount to wallet
+                                date: getLocalDateISO(),
+                                createdAt: new Date().toISOString()
+                            });
+                        }
+                    } else if (!newIsCredit) {
+                        // Same type (Cash/Bank), handle amount difference
+                        const diff = a - oldAmount;
                         if (diff !== 0) {
                             state.balanceLogs.push({
                                 id: Date.now(),
@@ -1954,9 +2239,14 @@ window.openDetails = function (id) {
                             });
                         }
                     }
-                    // --- EKLENEN KISIM BİTİŞ ---
 
-                    item.merchant = m; item.amount = a; item.isoDate = d; item.date = formatDateTR(d);
+                    item.merchant = m;
+                    item.amount = a;
+                    item.isoDate = d;
+                    item.date = formatDateTR(d);
+                    item.method = newMethod;
+                    item.isCredit = newIsCredit;
+
                     saveData();
                     if (window.location.pathname.includes('credit')) updateStatementView();
                     else if (window.location.pathname.includes('expenses')) renderFullHistory();
@@ -1985,19 +2275,16 @@ function deleteExpense(id) {
     const deletedItem = state.expenses.find(x => x.id === id);
     if (!deletedItem) return;
 
-    // --- EKLENEN KISIM BAŞLANGIÇ ---
-    // Eğer işlem kredi kartı değilse (yani nakit/banka ise), bakiyeye iade et
     if (!deletedItem.isCredit) {
         state.balanceLogs.push({
             id: Date.now(),
-            title: `İade: ${deletedItem.merchant}`, // İade açıklaması
-            amount: Number(deletedItem.amount), // Pozitif tutar (Para girişi)
+            title: `İade: ${deletedItem.merchant}`,
+            amount: Number(deletedItem.amount),
             date: getLocalDateISO(),
             createdAt: new Date().toISOString()
         });
         showToast('Bakiye İadesi', 'Silinen harcama tutarı cüzdana geri eklendi.', 'info');
     }
-    // --- EKLENEN KISIM BİTİŞ ---
 
     state.expenses = state.expenses.filter(x => x.id !== id);
     saveData();
@@ -2059,7 +2346,6 @@ function showToast(title, message, type = 'success', action = null) {
     }, duration);
 }
 
-// YENİ YEDEKLEME FONKSİYONU (Her şeyi kapsar)
 window.downloadBackup = function () {
     const data = {
         expenses: state.expenses,
@@ -2087,7 +2373,6 @@ window.downloadBackup = function () {
     showModal('Başarılı', 'Tüm veriler (Cüzdan, Varlıklar, Ayarlar) dahil yedeklendi.');
 }
 
-// YENİ GERİ YÜKLEME FONKSİYONU
 window.changeSyncFile = function () {
     const input = document.getElementById('restore-file-input');
     if (input) input.click();
@@ -2112,7 +2397,6 @@ window.restoreBackup = function (eventOrInput) {
                 const defaultMethods = ['Nakit', 'Havale / EFT'];
                 const defaultCats = ['Market', 'Yemek', 'Ulaşım', 'Teknoloji', 'Online Alışveriş', 'Fatura', 'Giyim', 'Sağlık', 'Eğlence', 'Diğer'];
 
-                // Merge Sets to avoid duplicates
                 const methodsSet = new Set([...defaultMethods, ...(data.methods || [])]);
                 const catsSet = new Set([...defaultCats, ...(data.categories || [])]);
 
@@ -2122,7 +2406,6 @@ window.restoreBackup = function (eventOrInput) {
                 localStorage.setItem('exp_cats', JSON.stringify([...catsSet]));
                 if (data.merchants) localStorage.setItem('exp_merchants', JSON.stringify(data.merchants));
 
-                // Yeni Eklenenler (Eksikse boş array atar)
                 localStorage.setItem('exp_recurring_plans', JSON.stringify(data.recurringPlans || []));
                 localStorage.setItem('exp_recurring_income', JSON.stringify(data.recurringIncome || []));
                 localStorage.setItem('exp_balance_logs', JSON.stringify(data.balanceLogs || []));
@@ -2132,13 +2415,12 @@ window.restoreBackup = function (eventOrInput) {
                 if (data.isDark !== undefined) localStorage.setItem('dark_mode', data.isDark);
                 if (data.isPrivacyMode !== undefined) localStorage.setItem('privacy_mode', data.isPrivacyMode);
 
-                // Yedekleme Tarihini Kaydet (Görünürlük için)
                 let backupDate = null;
 
                 if (data.lastSync) {
                     backupDate = new Date(data.lastSync);
                 } else {
-                    // 1. Dosya adından YYYY-MM-DD (2026-02-05)
+
                     const isoMatch = file.name.match(/(\d{4})-(\d{2})-(\d{2})/);
                     if (isoMatch) {
                         backupDate = new Date(`${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}T12:00:00`);
@@ -2160,7 +2442,6 @@ window.restoreBackup = function (eventOrInput) {
 
                 localStorage.setItem('exp_last_sync', backupDate.toISOString());
 
-                // Reset dataVersion to trigger migration on reload (for legacy backups)
                 if (!data.dataVersion || data.dataVersion < 2) {
                     localStorage.setItem('exp_data_version', '1');
                 } else {
@@ -2180,8 +2461,6 @@ window.restoreBackup = function (eventOrInput) {
     reader.readAsText(file);
 }
 
-// Dinamik içerik için Event Delegation (Akıllı Dinleyici)
-// Bu kod, settings sayfası sonradan yüklense bile dosya seçimini yakalar.
 document.addEventListener('change', function (e) {
     if (e.target && e.target.id === 'restore-file-input') {
         console.log("[Restore] Yedek dosyası seçildi, işlem başlatılıyor...");
@@ -2195,7 +2474,7 @@ window.confirmReset = function () {
         {
             text: 'Evet, Hepsini Sil', class: 'btn-delete', onClick: () => {
                 localStorage.clear();
-                // Extra safety: explicit removal
+                localStorage.clear();
                 const keys = ['exp_logs', 'exp_cards', 'exp_assets', 'exp_methods', 'exp_cats', 'exp_merchants', 'dark_mode', 'privacy_mode', 'wallet_privacy', 'exp_recurring_plans', 'exp_recurring_income', 'exp_balance_logs'];
                 keys.forEach(k => localStorage.removeItem(k));
 
@@ -2207,35 +2486,16 @@ window.confirmReset = function () {
 }
 function updatePeriodSelector() { }
 
-// === KURUŞ (INTEGER CURRENCY) HELPER FUNCTIONS ===
-// Tüm parasal değerler kuruş cinsinden (integer) saklanır
-// 100.50 TL = 10050 kuruş
-
-/**
- * TL değerini kuruşa çevirir (kayıt için)
- * @param {number} tl - TL cinsinden değer (örn: 100.50)
- * @returns {number} - Kuruş cinsinden integer değer (örn: 10050)
- */
 function toKurus(tl) {
     if (tl === null || tl === undefined || isNaN(tl)) return 0;
     return Math.round(Number(tl) * 100);
 }
 
-/**
- * Kuruşu TL'ye çevirir (görüntüleme için)
- * @param {number} kurus - Kuruş cinsinden integer değer
- * @returns {number} - TL cinsinden değer
- */
 function toTL(kurus) {
     if (kurus === null || kurus === undefined || isNaN(kurus)) return 0;
     return Number(kurus) / 100;
 }
 
-/**
- * Kuruş değerini formatlı TL string'e çevirir
- * @param {number} kurus - Kuruş cinsinden integer değer
- * @returns {string} - Formatlı TL (örn: "1.234,50")
- */
 function formatMoney(kurus) {
     const tl = toTL(kurus);
     return tl.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
@@ -2262,7 +2522,6 @@ function updateCardActionButton() {
 function getOfficialHolidays(year) {
     let holidays = {};
 
-    // Fixed Holidays (Same every year)
     holidays[`${year}-01-01`] = "Yılbaşı";
     holidays[`${year}-04-23`] = "Ulusal Egemenlik ve Çocuk Bayramı";
     holidays[`${year}-05-01`] = "Emek ve Dayanışma Günü";
@@ -2271,9 +2530,7 @@ function getOfficialHolidays(year) {
     holidays[`${year}-08-30`] = "Zafer Bayramı";
     holidays[`${year}-10-28`] = "Cumhuriyet Bayramı Arifesi";
     holidays[`${year}-10-29`] = "Cumhuriyet Bayramı";
-    // holidays[`${year}-12-31`] = "Yılbaşı Gecesi"; // Not an official holiday for work, but listed by user.
 
-    // Dynamic Holidays (Specific to 2026/2027)
     if (year === 2026) {
         holidays["2026-03-19"] = "Ramazan Bayramı Arifesi";
         holidays["2026-03-20"] = "Ramazan Bayramı 1.gün";
@@ -2336,7 +2593,7 @@ function openPayDebtModal() {
     if (!activeCard) return;
 
     const today = new Date();
-    today.setMonth(today.getMonth() + state.periodOffset);
+
     let start, end;
     const cutoff = activeCard.cutoff;
 
@@ -2348,7 +2605,6 @@ function openPayDebtModal() {
         end = new Date(today.getFullYear(), today.getMonth() + 1, cutoff);
     }
 
-    // Adjust end date if it falls on weekend/holiday (Accurate Cutoff Date)
     end = getNextWorkDayTR(end);
 
     const allCardOps = state.expenses.filter(x => x.method === activeCard.name);
@@ -2432,15 +2688,13 @@ function saveDebtPayment(card) {
         isPayment: true
     });
 
-    // --- EKLENEN KISIM BAŞLANGIÇ (Cüzdandan Düşme) ---
     state.balanceLogs.push({
-        id: Date.now() + 1, // Benzersiz ID için +1
+        id: Date.now() + 1,
         title: `KK Borç Ödemesi: ${card.name}`,
-        amount: -amountVal, // Eksi bakiye (Para çıkışı)
+        amount: -amountVal,
         date: dateVal,
         createdAt: new Date().toISOString()
     });
-    // --- EKLENEN KISIM BİTİŞ ---
 
     saveData();
     updateStatementView();
@@ -2453,7 +2707,6 @@ function initCustomSelect(selectId) {
     const originalSelect = document.getElementById(selectId);
     if (!originalSelect) return;
 
-    // FIX: Only check the element immediately after this select
     const nextEl = originalSelect.nextElementSibling;
     if (nextEl && nextEl.classList.contains('custom-select-wrapper')) {
         nextEl.remove();
@@ -2464,40 +2717,33 @@ function initCustomSelect(selectId) {
     const wrapper = document.createElement('div');
     wrapper.className = 'custom-select-wrapper';
 
-    // Helper to get icon for category/method
     function getIconForOption(text) {
         if (!text) return 'fa-solid fa-tag';
         const t = text.toString().toLowerCase();
 
-        // 1. Placeholder / Default
         if (t.includes('kategori')) return 'fa-solid fa-layer-group';
         if (t.includes('seçiniz') || t.includes('seciniz') || t.includes('tüm kartlar') || t.includes('tum kartlar')) return 'fa-regular fa-credit-card';
 
-        // 2. Specific Turkish Banks & Cards (Prioritized)
         if (t.includes('enpara') || t.includes('ziraat') || t.includes('garanti') || t.includes('yapı kredi') ||
             t.includes('akbank') || t.includes('iş bankası') || t.includes('finans') || t.includes('vakıf') ||
             t.includes('debit')) {
             return 'fa-regular fa-credit-card';
         }
 
-        // 3. Specific Installment/Payment Terms
         if (t.includes('tek çekim') || t.includes('tek cekim')) return 'fa-solid fa-money-bill-1';
         if (t.includes('taksit')) return 'fa-solid fa-layer-group';
         if (t.includes('havale') || t.includes('eft') || t.includes('transfer')) return 'fa-solid fa-money-bill-transfer';
         if (t === 'nakit') return 'fa-solid fa-wallet';
 
-        // Cashback / Return Types
         if (t.includes('iade yok')) return 'fa-solid fa-circle-xmark';
         if (t.includes('yüzde')) return 'fa-solid fa-percent';
         if (t.includes('sabit')) return 'fa-solid fa-turkish-lira-sign';
 
-        // Brand Icons
         if (t.includes('visa')) return 'fa-brands fa-cc-visa';
         if (t.includes('mastercard')) return 'fa-brands fa-cc-mastercard';
         if (t.includes('amex') || t.includes('american express')) return 'fa-brands fa-cc-amex';
         if (t.includes('troy')) return 'fa-regular fa-credit-card';
 
-        // 4. Generic Card Detection (User Created)
         const isUserCard = state.cards && state.cards.some(c => c.name.toLowerCase() === t);
         if (isUserCard) {
             if (t.includes('visa')) return 'fa-brands fa-cc-visa';
@@ -2506,7 +2752,6 @@ function initCustomSelect(selectId) {
             return 'fa-regular fa-credit-card';
         }
 
-        // 5. Categories
         if (t.includes('market')) return 'fa-solid fa-basket-shopping';
         if (t.includes('giyim')) return 'fa-solid fa-shirt';
         if (t.includes('yemek') || t.includes('restoran')) return 'fa-solid fa-utensils';
@@ -2523,7 +2768,6 @@ function initCustomSelect(selectId) {
         if (t.includes('abonelik')) return 'fa-solid fa-repeat';
         if (t.includes('online') || t.includes('alışveriş')) return 'fa-solid fa-cart-shopping';
 
-        // Default
         return 'fa-solid fa-tag';
     }
 
@@ -2533,7 +2777,7 @@ function initCustomSelect(selectId) {
 
     const selectedOption = originalSelect.options[originalSelect.selectedIndex];
     const initialText = selectedOption ? selectedOption.text : 'Seçiniz...';
-    // FIX: Using only the returned class from helper (which includes fa-solid/brands/regular)
+
     trigger.innerHTML = `<i class="${getIconForOption(initialText)}"></i>${initialText}`;
 
     trigger.addEventListener('keydown', (e) => {
@@ -2618,8 +2862,6 @@ document.addEventListener('click', function () {
 
 
 async function fetchMarketData() {
-
-    // CACHE CHECK: Rate Limit Prevention (10 mins)
     const lastFetch = localStorage.getItem('last_market_fetch');
     const now = Date.now();
     if (lastFetch && (now - lastFetch < 600000) && state.marketData && Object.keys(state.marketData).length > 0) {
@@ -2629,8 +2871,6 @@ async function fetchMarketData() {
         return;
     }
 
-
-    // 1. YEDEK VERİLER
     const fallbackData = {
         'gram-altin': 7550.00,
         'usd': 43.30,
@@ -2643,9 +2883,6 @@ async function fetchMarketData() {
     }
 
     try {
-        // CoinGecko: Crypto & Gold (PAXG)
-        // Frankfurter: Fiat (EUR) - USD'yi CoinGecko'dan (USDT) alıyoruz çünkü TR piyasasında USDT daha yaygın referans
-
         const cgUrl = 'https://api.coingecko.com/api/v3/simple/price?ids=tether,pax-gold,bitcoin&vs_currencies=try';
         const ffUrl = 'https://api.frankfurter.app/latest?from=EUR&to=TRY';
 
@@ -2659,7 +2896,6 @@ async function fetchMarketData() {
         const cgData = await cgRes.json();
         const ffData = await ffRes.json();
 
-        // --- CoinGecko Verileri ---
         if (cgData.tether && cgData.tether.try) {
             state.marketData['usd'] = cgData.tether.try;
         }
@@ -2667,22 +2903,18 @@ async function fetchMarketData() {
             state.marketData['btc'] = cgData.bitcoin.try;
         }
         if (cgData['pax-gold'] && cgData['pax-gold'].try) {
-            // PAXG (1 Ons) -> Gram Hesabı
             state.marketData['gram-altin'] = cgData['pax-gold'].try / 31.1035;
         }
 
-        // --- Frankfurter Verileri ---
         if (ffData.rates && ffData.rates.TRY) {
             state.marketData['eur'] = ffData.rates.TRY;
         }
-
-
 
         renderMarketTicker();
         if (typeof renderSavingsPage === 'function' && window.location.pathname.includes('savings.html')) {
             renderSavingsPage();
         }
-        localStorage.setItem('last_market_fetch', Date.now()); // CACHE SUCCESS
+        localStorage.setItem('last_market_fetch', Date.now());
 
     } catch (e) {
         console.warn('API Hatası, yedek veriler devrede:', e);
@@ -2696,7 +2928,7 @@ function checkBackupUsage() {
     count++;
     localStorage.setItem('user_login_count', count);
 
-    // Her 30. girişte sor
+    // Her 100. girişte sor
     if (count % 100 === 0) {
         setTimeout(() => {
             showModal('Yedek Hatırlatması', 'Verilerini en son ne zaman yedekledin? Geri alınamaz veri kaybını önlemek için şimdi yedek indirebilirsin.', [
@@ -2708,10 +2940,6 @@ function checkBackupUsage() {
 }
 
 function exportToSheets() {
-    // Google Sheets için özel format (Noktalı virgül yerine tab veya virgül daha iyi olabilir ama TR excel için noktalı virgül standarttır. 
-    // Sheets için en temiz yöntem kopyalanabilir bir alan sunmak veya direkt CSV indirmektir.)
-    // Burada kullanıcı isteğine göre "Sheets" isminde farklı bir CSV formatı sunacağız.
-
     const headers = ['Tarih', 'Yer', 'Aciklama', 'Tutar', 'Yontem', 'Kategori'];
     const rows = state.expenses.map(x => [
         x.date,
@@ -2755,8 +2983,6 @@ function renderMarketTicker() {
     let html = '';
     items.forEach(item => {
         const val = state.marketData[item.key];
-        // FIX: formatMoney expects Kuruş (divides by 100), but marketData is already in TL.
-        // So we use toLocaleString directly.
         const displayVal = val > 0 ? val.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-';
         const isSavings = window.location.pathname.includes('savings.html');
         const clickAttr = isSavings ? `onclick="document.getElementById('asset-type').value='${item.key}'; document.getElementById('asset-price').value='${val}'; initCustomSelect('asset-type');"` : '';
@@ -2808,16 +3034,14 @@ function handleAssetTrade(type) {
 
     state.assets.push(trade);
 
-    // --- EKLENEN KISIM: Cüzdan Bakiyesi Güncelleme ---
-    const totalValueKurus = Math.round(amount * priceKurus); // Total in kuruş
+    const totalValueKurus = Math.round(amount * priceKurus);
     state.balanceLogs.push({
         id: Date.now() + 1,
         title: `Yatırım ${type === 'buy' ? 'Alışı' : 'Satışı'}: ${assetType.toUpperCase()} (${amount}x)`,
-        amount: type === 'buy' ? -totalValueKurus : totalValueKurus, // Alışta para çıkar, satışta para girer
-        date: formatDateTR(dateVal), // Veya isoDate
+        amount: type === 'buy' ? -totalValueKurus : totalValueKurus,
+        date: formatDateTR(dateVal),
         createdAt: new Date().toISOString()
     });
-    // ------------------------------------------------
 
     saveData();
 
@@ -2827,7 +3051,7 @@ function handleAssetTrade(type) {
     renderSavingsPage();
 }
 
-/* --- RECURRING INCOME LOGIC --- */
+
 
 window.addRecurringIncome = function () {
     const name = document.getElementById('income-name').value.trim();
@@ -3365,6 +3589,11 @@ function renderCalendarPage() {
 
         dayEl.innerHTML = html;
         dayEl.onclick = () => {
+            // Block if privacy mode is enabled
+            if (state.isPrivacyMode) {
+                showToast('Gizlilik Modu', 'Gizlilik modunda detaylar görüntülenemez.', 'error');
+                return;
+            }
             showDayDetails(currentDateStr, dayExpenses, recurringDue);
         };
 
@@ -3411,7 +3640,7 @@ function renderSavingsPage() {
     const walletBalance = state.balanceLogs.reduce((sum, log) => sum + Number(log.amount), 0);
     const greetingP = document.querySelector('.greeting p');
     if (greetingP) {
-        greetingP.innerHTML = `Altın, döviz ve borsa takibi. <span style="color:var(--success); font-weight:bold; margin-left:15px; background:rgba(46,196,182,0.1); padding:4px 8px; border-radius:6px;">Cüzdan: ${formatMoney(walletBalance)} ₺</span>`;
+        greetingP.innerHTML = `Altın, döviz ve borsa takibi. <span class="privacy-blur" style="color:var(--success); font-weight:bold; margin-left:15px; background:rgba(46,196,182,0.1); padding:4px 8px; border-radius:6px;">Cüzdan: ${formatMoney(walletBalance)} ₺</span>`;
     }
     // --------------------------------------------------------
 
@@ -3497,7 +3726,7 @@ function renderSavingsPage() {
                         </div>
                         <div class="asset-info">
                             <h4>${getAssetLabel(key)}</h4>
-                            <p>${Number(item.qty).toLocaleString('tr-TR', { maximumFractionDigits: 4 })} ${getAssetUnit(key)} x ${formatMoney(item.avgCost)} TL</p>
+                            <p><span class="privacy-blur">${Number(item.qty).toLocaleString('tr-TR', { maximumFractionDigits: 4 })} ${getAssetUnit(key)} x ${formatMoney(item.avgCost)} TL</span> <small style="color:var(--text-light)">(Ort. Maliyet)</small></p>
                         </div>
                     </div>
                     <div style="display:flex; align-items:center; gap:10px;">
@@ -3864,7 +4093,20 @@ function checkRecurringTransactions() {
         let y = startYear;
         let m = startMonth;
 
-        while (true) {
+        // SAFETY GUARD: Prevent infinite loops from corrupt data
+        // Max 60 months (5 years) of backfill
+        let safetyCounter = 0;
+        const MAX_BACKFILL_MONTHS = 60;
+
+        // Sanity check: If start year is too old, reset to prevent massive generation
+        if (y < 2020) {
+            console.warn(`[RecurringTransactions] startYear too old (${y}), resetting to current month.`);
+            y = currentYear;
+            m = currentMonth - 1; // Will be incremented
+        }
+
+        while (safetyCounter < MAX_BACKFILL_MONTHS) {
+            safetyCounter++;
             // Move to next month
             m++;
             if (m > 11) { m = 0; y++; }

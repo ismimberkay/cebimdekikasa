@@ -72,23 +72,52 @@
 
                         <div class="credit-stat-box"
                             style="flex:1; display:flex; justify-content:center; align-items:center;">
-                            <div class="credit-card-visual">
-                                <div style="display:flex; justify-content:space-between; align-items:center;">
-                                    <div class="card-chip"></div>
-                                    <div class="card-logo">VISA</div>
-                                </div>
+                            <div class="credit-card-container" onclick="this.classList.toggle('flipped')"
+                                title="Kartı çevirmek için tıkla">
+                                <div class="credit-card-inner">
+                                    <!-- FRONT FACE -->
+                                    <div class="credit-card-visual credit-card-front">
+                                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                                            <div class="card-chip"></div>
+                                            <div class="card-logo">VISA</div>
+                                        </div>
 
-                                <div class="card-number">**** **** **** <span id="card-last-digits">----</span></div>
+                                        <div class="card-number">**** **** **** <span id="card-last-digits">----</span>
+                                        </div>
 
-                                <div class="card-info-group">
-                                    <div>
-                                        <div class="card-label">Kalan Limit</div>
-                                        <div class="card-value"><span id="remaining-limit">0.00</span> ₺</div>
+                                        <div class="card-info-group">
+                                            <div>
+                                                <div class="card-label">Kalan Limit</div>
+                                                <div class="card-value"><span id="remaining-limit">0.00</span> ₺</div>
+                                            </div>
+                                            <div style="text-align:right;">
+                                                <div class="card-label">Limit Durumu</div>
+                                                <div class="card-limit-bar">
+                                                    <div id="limit-bar-fill" class="card-limit-fill"
+                                                        style="width: 100%;"></div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div style="text-align:right;">
-                                        <div class="card-label">Limit Durumu</div>
-                                        <div class="card-limit-bar">
-                                            <div id="limit-bar-fill" class="card-limit-fill" style="width: 100%;"></div>
+
+                                    <!-- BACK FACE -->
+                                    <div class="credit-card-back">
+                                        <div class="card-magnetic-stripe"></div>
+
+                                        <div class="card-signature-area">
+                                            <div class="card-signature-box"></div>
+                                            <div class="card-cvc-box" id="card-cvc-display">***</div>
+                                        </div>
+
+                                        <div class="card-back-info">
+                                            <div>
+                                                <div class="card-back-label">Son Kullanma</div>
+                                                <div class="card-back-value" id="card-expiry-display">**/**</div>
+                                            </div>
+                                            <div style="text-align:right;">
+                                                <div class="card-back-label">Banka</div>
+                                                <div class="card-back-value" id="card-bank-name">-</div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

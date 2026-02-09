@@ -1821,6 +1821,156 @@ body.dark-theme .skeleton::after {
     box-shadow: 0 0 10px rgba(0, 198, 255, 0.5);
 }
 
+/* --- KREDİ KARTI FLİP ANİMASYONU --- */
+
+.credit-card-container {
+    perspective: 1000px;
+    width: 100%;
+    max-width: 340px;
+    height: 200px;
+    cursor: pointer;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.credit-card-container:hover {
+    transform: scale(1.02);
+}
+
+.credit-card-container:hover .credit-card-front,
+.credit-card-container:hover .credit-card-back {
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+}
+
+.credit-card-container:active {
+    transform: scale(0.98);
+}
+
+.credit-card-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1);
+    transform-style: preserve-3d;
+}
+
+.credit-card-container.flipped .credit-card-inner {
+    transform: rotateY(180deg);
+}
+
+.credit-card-front,
+.credit-card-back {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    border-radius: 15px;
+}
+
+.credit-card-front {
+    z-index: 2;
+}
+
+.credit-card-back {
+    z-index: 1;
+    transform: rotateY(180deg);
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    color: #fff;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* Manyetik Şerit */
+.card-magnetic-stripe {
+    width: 100%;
+    height: 40px;
+    background: linear-gradient(135deg, #0a0a0a 0%, #2a2a2a 100%);
+    margin-top: 10px;
+}
+
+/* İmza Alanı ve CVC */
+.card-signature-area {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.card-signature-box {
+    flex: 1;
+    height: 40px;
+    background: repeating-linear-gradient(45deg,
+            #f0f0f0,
+            #f0f0f0 2px,
+            #e0e0e0 2px,
+            #e0e0e0 4px);
+    border-radius: 5px;
+}
+
+.card-cvc-box {
+    width: 60px;
+    height: 40px;
+    background: #fff;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #1a1a2e;
+    font-weight: 700;
+    font-size: 1.1rem;
+    letter-spacing: 2px;
+    font-family: 'Courier New', monospace;
+}
+
+/* Arka Yüz Bilgi Alanı */
+.card-back-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-top: auto;
+}
+
+.card-back-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.7);
+    letter-spacing: 1px;
+    margin-bottom: 5px;
+}
+
+.card-back-value {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff;
+}
+
+/* Flip Hint Icon */
+.card-flip-hint {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.6);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.3s;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+
+.credit-card-container:hover .card-flip-hint {
+    opacity: 1;
+    color: rgba(255, 255, 255, 0.9);
+    background: rgba(0, 0, 0, 0.5);
+}
+
 /* --- YENİ SIDEBAR & MODERN FİLTRE TASARIMI --- */
 
 /* Sidebar Footer (Tema Butonu için) */
@@ -2292,7 +2442,7 @@ body.dark-theme .skeleton::after {
 /* Privacy Mode Updates - Specific Blurring */
 body.privacy-active .amount-display,
 body.privacy-active .t-amount,
-body.privacy-active .market-price,
+body.privacy-active .privacy-blur,
 body.privacy-active .asset-total,
 body.privacy-active .asset-pl,
 body.privacy-active .credit-amount,
@@ -2311,12 +2461,30 @@ body.privacy-active .summary-label+div {
     user-select: none;
 }
 
-/* Ensure inputs and dates are NOT blurred */
-body.privacy-active input,
-body.privacy-active .cal-date-num,
-body.privacy-active .cal-day {
+/* Ensure inputs are NOT blurred (but calendar should be) */
+body.privacy-active input {
     filter: none !important;
     opacity: 1 !important;
+}
+
+/* Calendar dates SHOULD be blurred in privacy mode */
+body.privacy-active .cal-date-num,
+body.privacy-active .cal-day,
+body.privacy-active .cal-day-content,
+body.privacy-active .cal-day .bill-icon {
+    filter: blur(6px);
+    opacity: 0.6;
+}
+
+/* Disable calendar clicks in privacy mode */
+body.privacy-active .cal-day {
+    pointer-events: none;
+}
+
+/* Blur pie chart in privacy mode */
+body.privacy-active #expenseChart {
+    filter: blur(10px);
+    opacity: 0.5;
 }
 
 /* Sidebar Privacy Button */
@@ -4664,3 +4832,46 @@ span.flatpickr-day {
     max-width: 14.28% !important;
     box-sizing: border-box !important;
 }
+
+/* Future Installments Collapsible Section */
+.future-section {
+    background: rgba(67, 97, 238, 0.05);
+    border: 1px solid rgba(67, 97, 238, 0.2);
+    border-radius: 12px;
+    margin-bottom: 15px;
+    overflow: hidden;
+}
+
+.future-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.future-header:hover {
+    background: rgba(67, 97, 238, 0.1);
+}
+
+.future-arrow {
+    transition: transform 0.3s ease;
+    color: var(--text-light);
+}
+
+.future-section.collapsed .future-arrow {
+    transform: rotate(-90deg);
+}
+
+.future-content {
+    max-height: 1000px;
+    overflow: hidden;
+    transition: max-height 0.3s ease, padding 0.3s ease;
+    padding: 0 10px 10px;
+}
+
+.future-section.collapsed .future-content {
+    max-height: 0;
+    padding: 0 10px;
+}.future-section { display: block !important; width: 100% !important; opacity: 1 !important; visibility: visible !important; flex-shrink: 0; }
